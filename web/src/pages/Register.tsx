@@ -50,7 +50,7 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-950 px-4 py-12 sm:px-6 lg:px-8">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-950 px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8 bg-gray-900 p-8 rounded-lg border border-gray-800">
         <div className="text-center">
           <div className="mx-auto h-12 w-12 bg-blue-600 rounded-xl flex items-center justify-center">
@@ -116,6 +116,9 @@ const RegisterPage = () => {
           </div>
         </form>
       </div>
+      <footer className="mt-8 text-center text-sm text-gray-500">
+        &copy; {new Date().getFullYear()} {t('common.company_name')}
+      </footer>
     </div>
   );
 };

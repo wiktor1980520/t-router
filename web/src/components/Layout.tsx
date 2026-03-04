@@ -106,8 +106,13 @@ const Layout = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden pt-16 md:pt-0 w-full">
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 w-full">
-          <Outlet />
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 w-full flex flex-col">
+          <div className="flex-1">
+            <Outlet />
+          </div>
+          <footer className="mt-8 py-4 text-center text-sm text-gray-500 border-t border-gray-800">
+            &copy; {new Date().getFullYear()} {t('common.company_name')}
+          </footer>
         </main>
       </div>
     </div>

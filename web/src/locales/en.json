@@ -19,7 +19,8 @@
     "thu": "Thu",
     "fri": "Fri",
     "sat": "Sat",
-    "sun": "Sun"
+    "sun": "Sun",
+    "company_name": "Zhuoran Information Technology (Shenzhen) Co., Ltd."
   },
   "nav": {
     "dashboard": "Dashboard",
