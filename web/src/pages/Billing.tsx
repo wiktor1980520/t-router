@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
@@ -46,6 +46,8 @@ const Billing = () => {
     }
   };
 
+  // Deprecated manual recharge
+  /*
   const handleRecharge = async () => {
     // Deprecated manual recharge
     if (!rechargeAmount || rechargeAmount <= 0) return;
@@ -59,6 +61,7 @@ const Billing = () => {
       console.error(err);
     }
   };
+  */
 
   return (
     <div className="space-y-6">

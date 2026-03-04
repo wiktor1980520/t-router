@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../lib/api';
 import { Plus, Trash2, Copy, Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
