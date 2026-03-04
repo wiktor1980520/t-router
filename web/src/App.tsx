@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -11,7 +10,7 @@ import Billing from './pages/Billing';
 import Settings from './pages/Settings';
 import Layout from './components/Layout';
 
-const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
   const { t } = useTranslation();
   const { token, isLoading } = useAuth();
 
@@ -26,7 +25,7 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
-const PublicRoute = ({ children }: { children: JSX.Element }) => {
+const PublicRoute = ({ children }: { children: React.ReactElement }) => {
   const { token } = useAuth();
 
   if (token) {
