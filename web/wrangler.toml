@@ -1,0 +1,7 @@
+name = "t-router-web"
+compatibility_date = "2024-03-04"
+pages_build_output_dir = "dist"
+
+[vars]
+VITE_API_BASE_URL = "https://api.t-router.com" 
+# Replace with your actual backend API URL or leave empty if using same domain
