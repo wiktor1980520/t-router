@@ -47,7 +47,15 @@
     "security_check_failed": "Security check failed",
     "signing_in": "Signing in...",
     "creating_account": "Creating account...",
-    "create_account": "Create account"
+    "create_account": "Create account",
+    "phone": "Phone Number",
+    "verification_code": "Verification Code",
+    "send_code": "Send Code",
+    "resend_code": "Resend",
+    "code_sent": "Code Sent",
+    "code_send_failed": "Failed to send code",
+    "invalid_phone": "Invalid phone number",
+    "invalid_code": "Verification code is required"
   },
   "dashboard": {
     "current_balance": "Current Balance",

@@ -48,6 +48,7 @@ func InitDB() {
 		&models.ModelRoute{},
 		&models.AuditLog{},
 		&models.Model{},
+		&models.VerificationCode{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)

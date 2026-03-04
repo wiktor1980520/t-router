@@ -5,6 +5,7 @@ import (
 	"os"
 	"trouter/internal/api"
 	"trouter/internal/config"
+	"trouter/internal/sms"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -20,6 +21,13 @@ func main() {
 
 	// Initialize Database
 	config.InitDB()
+	
+	// Initialize SMS Provider
+	if err := sms.Init(); err != nil {
+		log.Printf("Warning: Failed to initialize SMS provider: %v. Using Mock Provider.", err)
+	} else {
+		log.Println("SMS Provider initialized successfully.")
+	}
 	
 	r := gin.Default()
 
@@ -63,6 +71,7 @@ func main() {
 		// Public routes
 		dashboard.POST("/auth/register", api.RegisterHandler)
 		dashboard.POST("/auth/login", api.LoginHandler)
+		dashboard.POST("/auth/send-code", api.SendCodeHandler) // SMS Verification
 		dashboard.GET("/payment/notify", api.PaymentNotifyHandler) // Webhook endpoint
 
 		// Protected routes

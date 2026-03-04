@@ -172,6 +172,7 @@ func UpdateSettingsHandler(c *gin.Context) {
 	var req struct {
 		BalanceAlertThreshold *float64 `json:"balance_alert_threshold"`
 		Phone                 *string  `json:"phone"`
+		VerificationCode      string   `json:"verification_code"`
 	}
 	
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -185,8 +186,27 @@ func UpdateSettingsHandler(c *gin.Context) {
 	}
 	if req.Phone != nil {
 		if *req.Phone == "" {
+			// Clearing phone number might require verification too in strict systems, 
+			// but for now let's assume it's allowed or not supported via UI yet.
 			updates["phone"] = nil
 		} else {
+			// Verify SMS code
+			if req.VerificationCode == "" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Verification code required to update phone"})
+				return
+			}
+			if !verifyCode(*req.Phone, req.VerificationCode) {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired verification code"})
+				return
+			}
+			
+			// Check if phone already taken
+			var existingUser models.User
+			if err := config.DB.Where("phone = ? AND id != ?", *req.Phone, userID).First(&existingUser).Error; err == nil {
+				c.JSON(http.StatusConflict, gin.H{"error": "Phone number already in use"})
+				return
+			}
+			
 			updates["phone"] = *req.Phone
 		}
 	}

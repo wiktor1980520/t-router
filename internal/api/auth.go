@@ -88,6 +88,27 @@ func RegisterHandler(c *gin.Context) {
 		return
 	}
 
+	// Check if phone exists
+	if req.Phone != "" {
+		var phoneUser models.User
+		if err := config.DB.Where("phone = ?", req.Phone).First(&phoneUser).Error; err == nil {
+			c.JSON(http.StatusConflict, gin.H{"error": "Phone number already registered"})
+			return
+		}
+
+		// Verify SMS code
+		if !verifyCode(req.Phone, req.VerificationCode) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired verification code"})
+			return
+		}
+	} else {
+		// Phone is mandatory now per requirements?
+		// User said "Register page needs phone number, and needs SMS verification".
+		// So phone is mandatory.
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Phone number is required"})
+		return
+	}
+
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -95,8 +116,10 @@ func RegisterHandler(c *gin.Context) {
 		return
 	}
 
+	phonePtr := &req.Phone
 	user := models.User{
 		Email:        req.Email,
+		Phone:        phonePtr,
 		PasswordHash: string(hashedPassword),
 		Balance:      0, // New users start with 0 balance
 	}

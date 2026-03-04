@@ -11,11 +11,38 @@ const RegisterPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [phone, setPhone] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [countdown, setCountdown] = useState(0);
   const [turnstileToken, setTurnstileToken] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  const handleSendCode = async () => {
+    if (!phone) {
+      setError(t('auth.invalid_phone'));
+      return;
+    }
+    setError('');
+    
+    try {
+      await api.post('/auth/send-code', { phone });
+      setCountdown(60);
+      const timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (err: any) {
+      setError(err.response?.data?.error || t('auth.code_send_failed'));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,6 +51,18 @@ const RegisterPage = () => {
 
     if (password !== confirmPassword) {
       setError(t('auth.passwords_mismatch'));
+      setLoading(false);
+      return;
+    }
+
+    if (!phone) {
+      setError(t('auth.invalid_phone'));
+      setLoading(false);
+      return;
+    }
+
+    if (!verificationCode) {
+      setError(t('auth.invalid_code'));
       setLoading(false);
       return;
     }
@@ -38,6 +77,8 @@ const RegisterPage = () => {
       const response = await api.post('/auth/register', { 
         email, 
         password,
+        phone,
+        verification_code: verificationCode,
         turnstile_token: turnstileToken
       });
       login(response.data.token, response.data.user);
@@ -73,6 +114,34 @@ const RegisterPage = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
+            </div>
+            <div>
+              <input
+                type="tel"
+                required
+                className="relative block w-full border-0 bg-gray-800 py-2.5 px-3 text-gray-100 ring-1 ring-inset ring-gray-700 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                placeholder={t('auth.phone')}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                required
+                className="relative block w-full border-0 bg-gray-800 py-2.5 px-3 text-gray-100 ring-1 ring-inset ring-gray-700 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 pr-24"
+                placeholder={t('auth.verification_code')}
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={handleSendCode}
+                disabled={countdown > 0}
+                className="absolute right-2 top-2.5 z-20 text-sm font-medium text-blue-500 hover:text-blue-400 disabled:text-gray-500 disabled:cursor-not-allowed"
+              >
+                {countdown > 0 ? `${countdown}s` : t('auth.send_code')}
+              </button>
             </div>
             <div>
               <input

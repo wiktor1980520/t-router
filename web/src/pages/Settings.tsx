@@ -8,10 +8,36 @@ const Settings = () => {
   const { user, refreshUser } = useAuth();
   const [threshold, setThreshold] = useState(user?.balance_alert_threshold || 10.0);
   const [phone, setPhone] = useState(user?.phone || '');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [countdown, setCountdown] = useState(0);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const { t, i18n } = useTranslation();
+
+  const handleSendCode = async () => {
+    if (!phone) {
+      setError(t('auth.invalid_phone'));
+      return;
+    }
+    setError('');
+    
+    try {
+      await api.post('/auth/send-code', { phone });
+      setCountdown(60);
+      const timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (err: any) {
+      setError(err.response?.data?.error || t('auth.code_send_failed'));
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,10 +48,12 @@ const Settings = () => {
     try {
       await api.put('/user/settings', { 
         balance_alert_threshold: parseFloat(threshold.toString()),
-        phone: phone
+        phone: phone,
+        verification_code: verificationCode
       });
       await refreshUser();
       setMessage(t('settings.update_success'));
+      setVerificationCode(''); // Clear code after success
     } catch (err: any) {
       setError(err.response?.data?.error || t('settings.update_failed'));
     } finally {
@@ -74,6 +102,25 @@ const Settings = () => {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
             />
+            {phone !== (user?.phone || '') && (
+              <div className="mt-2 relative">
+                 <input
+                   type="text"
+                   className="block w-full rounded-md border-0 bg-gray-800 py-1.5 px-3 text-gray-100 ring-1 ring-inset ring-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 pr-24"
+                   placeholder={t('auth.verification_code')}
+                   value={verificationCode}
+                   onChange={(e) => setVerificationCode(e.target.value)}
+                 />
+                 <button
+                   type="button"
+                   onClick={handleSendCode}
+                   disabled={countdown > 0}
+                   className="absolute right-2 top-1.5 z-20 text-sm font-medium text-blue-500 hover:text-blue-400 disabled:text-gray-500 disabled:cursor-not-allowed"
+                 >
+                   {countdown > 0 ? `${countdown}s` : t('auth.send_code')}
+                 </button>
+              </div>
+            )}
           </div>
 
           <div>

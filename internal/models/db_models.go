@@ -22,6 +22,14 @@ type User struct {
 	Transactions []Transaction `gorm:"foreignKey:UserID" json:"transactions,omitempty"`
 }
 
+type VerificationCode struct {
+	ID        uint      `gorm:"primaryKey"`
+	Phone     string    `gorm:"size:20;not null;index"`
+	Code      string    `gorm:"size:10;not null"`
+	ExpiresAt time.Time `gorm:"not null"`
+	CreatedAt time.Time
+}
+
 func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
 	if u.ID == "" {
 		u.ID = uuid.New().String()
