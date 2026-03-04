@@ -6,7 +6,7 @@ import { CreditCard, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 
 const Billing = () => {
   const { t } = useTranslation();
-  const { user, refreshUser } = useAuth();
+  const { user } = useAuth();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [rechargeAmount, setRechargeAmount] = useState<number | ''>('');
