@@ -10,7 +10,7 @@ import Billing from './pages/Billing';
 import Settings from './pages/Settings';
 import Layout from './components/Layout';
 
-const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
+const ProtectedRoute = ({ children }: { children: ReactElement }) => {
   const { t } = useTranslation();
   const { token, isLoading } = useAuth();
 
@@ -25,7 +25,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
   return children;
 };
 
-const PublicRoute = ({ children }: { children: React.ReactElement }) => {
+const PublicRoute = ({ children }: { children: ReactElement }) => {
   const { token } = useAuth();
 
   if (token) {
