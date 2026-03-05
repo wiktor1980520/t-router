@@ -49,6 +49,7 @@ func InitDB() {
 		&models.AuditLog{},
 		&models.Model{},
 		&models.VerificationCode{},
+		&models.SystemConfig{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
@@ -58,6 +59,8 @@ func InitDB() {
 	seedData()
 	// Seed Admin User
 	seedAdmin()
+	// Seed System Configs
+	models.SeedSystemConfigs(DB)
 
 	log.Println("Database connected and migrated successfully.")
 }

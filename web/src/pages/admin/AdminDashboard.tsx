@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Users, Database, DollarSign } from 'lucide-react';
+import { Users, Database, DollarSign, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const AdminDashboard = () => {
@@ -50,6 +50,18 @@ const AdminDashboard = () => {
             </div>
           </div>
           <p className="text-gray-400">{t('admin.transactions_desc')}</p>
+        </Link>
+
+        <Link to="/admin/config" className="bg-gray-800 border border-gray-700 p-6 rounded-xl hover:bg-gray-750 hover:border-orange-500/50 transition-all group">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-3 bg-orange-500/10 rounded-lg group-hover:bg-orange-500/20 transition-colors">
+              <Settings className="w-8 h-8 text-orange-400" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-xl text-white">{t('admin.system_config')}</h3>
+            </div>
+          </div>
+          <p className="text-gray-400">{t('admin.system_config_desc')}</p>
         </Link>
       </div>
     </div>

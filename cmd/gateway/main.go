@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"trouter/internal/api"
+	adminApi "trouter/internal/api/admin"
 	"trouter/internal/config"
 	"trouter/internal/sms"
 
@@ -108,6 +109,7 @@ func main() {
 			admin.GET("/users", api.AdminListUsersHandler)
 			admin.GET("/users/:id", api.AdminGetUserHandler)
 			admin.PUT("/users/:id/status", api.AdminToggleUserStatusHandler)
+			admin.POST("/users/recharge", api.AdminRechargeUserHandler)
 			admin.GET("/transactions", api.AdminGetTransactionsHandler)
 
 			// Provider & Model Management (Write Access)
@@ -119,6 +121,10 @@ func main() {
 			
 			admin.POST("/models", api.CreateModelHandler)
 			admin.DELETE("/models/:id", api.DeleteModelHandler)
+
+			// System Config Management
+			admin.GET("/config", adminApi.GetSystemConfigHandler)
+			admin.PUT("/config", adminApi.UpdateSystemConfigHandler)
 		}
 	}
 

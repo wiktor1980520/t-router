@@ -86,7 +86,7 @@ const ApiKeys = () => {
                   </span>
                 </div>
                 <div className="mt-1 text-sm text-gray-500 font-mono flex items-center gap-2">
-                  <span>{visibleKeys.has(key.id) ? (key.key || 'Key hidden') : `${key.key_prefix}...`}</span>
+                  <span>{visibleKeys.has(key.id) ? (key.key || t('keys.key_hidden')) : `${key.key_prefix}...`}</span>
                   <button 
                     onClick={() => toggleVisibility(key.id)} 
                     className="text-gray-400 hover:text-white transition-colors"
@@ -140,7 +140,7 @@ const ApiKeys = () => {
                 <div className="flex justify-end gap-3">
                   <button
                     onClick={() => setShowNewKeyModal(false)}
-                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                    className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded transition-colors"
                   >
                     {t('common.cancel')}
                   </button>

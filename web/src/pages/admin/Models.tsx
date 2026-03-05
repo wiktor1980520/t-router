@@ -381,7 +381,7 @@ export default function AdminModels() {
               </div>
             </div>
             <div className="flex justify-end gap-2 mt-6">
-              <button onClick={() => setShowModelForm(false)} className="px-4 py-2 text-gray-400 hover:text-white">{t('common.cancel')}</button>
+              <button onClick={() => setShowModelForm(false)} className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded transition-colors">{t('common.cancel')}</button>
               <button onClick={handleCreateModel} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">{t('common.create')}</button>
             </div>
           </div>
@@ -432,7 +432,7 @@ export default function AdminModels() {
               />
             </div>
             <div className="flex justify-end gap-2 mt-6">
-              <button onClick={() => setShowProviderForm(false)} className="px-4 py-2 text-gray-400 hover:text-white">{t('common.cancel')}</button>
+              <button onClick={() => setShowProviderForm(false)} className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded transition-colors">{t('common.cancel')}</button>
               <button onClick={handleCreateProvider} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">{t('common.create')}</button>
             </div>
           </div>
@@ -488,7 +488,7 @@ export default function AdminModels() {
               />
             </div>
             <div className="flex justify-end gap-2 mt-6">
-              <button onClick={() => setShowRouteForm(false)} className="px-4 py-2 text-gray-400 hover:text-white">{t('common.cancel')}</button>
+              <button onClick={() => setShowRouteForm(false)} className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded transition-colors">{t('common.cancel')}</button>
               <button onClick={handleCreateRoute} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">{t('common.create')}</button>
             </div>
           </div>

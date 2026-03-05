@@ -357,10 +357,10 @@ const Models = () => {
                 value={newProvider.type}
                 onChange={handleTypeChange}
               >
-                <option value="openai">OpenAI Compatible</option>
-                <option value="moonshot">Moonshot AI (Kimi)</option>
-                <option value="anthropic">Anthropic</option>
-                <option value="azure">Azure OpenAI</option>
+                <option value="openai">{t('admin.type_openai')}</option>
+                <option value="moonshot">{t('admin.type_moonshot')}</option>
+                <option value="anthropic">{t('admin.type_anthropic')}</option>
+                <option value="azure">{t('admin.type_azure')}</option>
               </select>
               <input
                 type="text"
@@ -377,7 +377,7 @@ const Models = () => {
                 onChange={e => setNewProvider({...newProvider, api_key: e.target.value})}
               />
               <div className="flex justify-end gap-2 mt-4">
-                <button onClick={() => setShowProviderModal(false)} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">{t('common.cancel')}</button>
+                <button onClick={() => setShowProviderModal(false)} className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded transition-colors">{t('common.cancel')}</button>
                 <button onClick={handleCreateProvider} className="px-4 py-2 bg-blue-600 text-white rounded">{t('common.save')}</button>
               </div>
             </div>
@@ -441,7 +441,7 @@ const Models = () => {
                   onChange={e => setNewRoute({...newRoute, priority: Number(e.target.value)})}
                 />
               <div className="flex justify-end gap-2 mt-4">
-                <button onClick={() => setShowRouteModal(false)} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">{t('common.cancel')}</button>
+                <button onClick={() => setShowRouteModal(false)} className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded transition-colors">{t('common.cancel')}</button>
                 <button onClick={handleCreateRoute} className="px-4 py-2 bg-blue-600 text-white rounded">{t('common.save')}</button>
               </div>
             </div>
@@ -501,7 +501,7 @@ const Models = () => {
                 />
               </div>
               <div className="flex justify-end gap-2 mt-4">
-                <button onClick={() => setShowModelModal(false)} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">{t('common.cancel')}</button>
+                <button onClick={() => setShowModelModal(false)} className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded transition-colors">{t('common.cancel')}</button>
                 <button onClick={handleSaveModel} className="px-4 py-2 bg-blue-600 text-white rounded">{t('common.save')}</button>
               </div>
             </div>

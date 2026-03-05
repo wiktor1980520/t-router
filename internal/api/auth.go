@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 	"trouter/internal/config"
 	"trouter/internal/models"
@@ -116,12 +117,21 @@ func RegisterHandler(c *gin.Context) {
 		return
 	}
 
+	// Get initial balance from SystemConfig
+	var initialBalance float64 = 0
+	var configItem models.SystemConfig
+	if err := config.DB.Where("key = ?", "new_user_gift_amount").First(&configItem).Error; err == nil {
+		if val, err := strconv.ParseFloat(configItem.Value, 64); err == nil {
+			initialBalance = val
+		}
+	}
+
 	phonePtr := &req.Phone
 	user := models.User{
 		Email:        req.Email,
 		Phone:        phonePtr,
 		PasswordHash: string(hashedPassword),
-		Balance:      1.0, // New users start with 1.0 balance (Gift)
+		Balance:      initialBalance, // Set from config
 	}
 
 	if err := config.DB.Create(&user).Error; err != nil {
@@ -129,15 +139,17 @@ func RegisterHandler(c *gin.Context) {
 		return
 	}
 
-	// Create a transaction record for the gift
-	transaction := models.Transaction{
-		UserID:      user.ID,
-		Type:        "gift",
-		Amount:      1.0,
-		Description: "New User Registration Gift",
-		Status:      "completed",
+	// Create a transaction record for the gift if amount > 0
+	if initialBalance > 0 {
+		transaction := models.Transaction{
+			UserID:      user.ID,
+			Type:        "gift",
+			Amount:      initialBalance,
+			Description: "New User Registration Gift",
+			Status:      "completed",
+		}
+		config.DB.Create(&transaction)
 	}
-	config.DB.Create(&transaction)
 
 	// Generate token
 	token, err := GenerateToken(user.ID)

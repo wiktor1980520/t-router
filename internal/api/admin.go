@@ -7,6 +7,8 @@ import (
 	"trouter/internal/models"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // AdminListUsersHandler lists all users with pagination
@@ -87,4 +89,53 @@ func AdminGetTransactionsHandler(c *gin.Context) {
     }
     
     c.JSON(http.StatusOK, transactions)
+}
+
+// AdminRechargeUserHandler allows admins to manually recharge a user's balance
+func AdminRechargeUserHandler(c *gin.Context) {
+	// Only admin middleware should allow access here
+	
+	var req struct {
+		UserID string  `json:"user_id" binding:"required"`
+		Amount float64 `json:"amount" binding:"required,gt=0"`
+		Remark string  `json:"remark"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Start transaction
+	tx := config.DB.Begin()
+
+	// 1. Create Transaction Record
+	transaction := models.Transaction{
+		UserID:      req.UserID,
+		Type:        "admin_gift", // Distinguish from regular recharge
+		Amount:      req.Amount,
+		Description: "Admin Gift: " + req.Remark,
+		ReferenceID: "ADMIN-" + uuid.New().String(),
+	}
+	
+	if err := tx.Create(&transaction).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create transaction record"})
+		return
+	}
+
+	// 2. Update User Balance
+	if err := tx.Model(&models.User{}).Where("id = ?", req.UserID).Update("balance", gorm.Expr("balance + ?", req.Amount)).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user balance"})
+		return
+	}
+
+	tx.Commit()
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "User balance updated successfully",
+		"amount":  req.Amount,
+		"new_balance_added": true,
+	})
 }

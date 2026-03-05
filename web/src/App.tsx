@@ -15,6 +15,7 @@ import AdminUsers from './pages/admin/Users';
 import AdminUserDetail from './pages/admin/UserDetail';
 import AdminModels from './pages/admin/Models';
 import AdminTransactions from './pages/admin/Transactions';
+import AdminSystemConfig from './pages/admin/SystemConfig';
 import Layout from './components/Layout';
 
 const ProtectedRoute = ({ children }: { children: ReactElement }) => {
@@ -66,6 +67,7 @@ function App() {
             <Route path="users/:id" element={<AdminUserDetail />} />
             <Route path="models" element={<AdminModels />} />
             <Route path="transactions" element={<AdminTransactions />} />
+            <Route path="config" element={<AdminSystemConfig />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

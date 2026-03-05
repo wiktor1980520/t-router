@@ -9,7 +9,9 @@ import {
   Eye, 
   ToggleLeft, 
   ToggleRight,
-  Loader2
+  Loader2,
+  DollarSign,
+  X
 } from 'lucide-react';
 import api from '../../lib/api';
 
@@ -38,6 +40,13 @@ export default function AdminUsers() {
   const [pageSize] = useState(10);
   const [total, setTotal] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Recharge Modal State
+  const [showRechargeModal, setShowRechargeModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [rechargeAmount, setRechargeAmount] = useState('');
+  const [rechargeRemark, setRechargeRemark] = useState('');
+  const [rechargeLoading, setRechargeLoading] = useState(false);
 
   const fetchUsers = async () => {
     try {
@@ -65,6 +74,41 @@ export default function AdminUsers() {
     } catch (error) {
       console.error('Failed to toggle user status:', error);
       alert(t('admin.error_update_status'));
+    }
+  };
+
+  const openRechargeModal = (user: User) => {
+    setSelectedUser(user);
+    setRechargeAmount('');
+    setRechargeRemark('');
+    setShowRechargeModal(true);
+  };
+
+  const closeRechargeModal = () => {
+    setShowRechargeModal(false);
+    setSelectedUser(null);
+  };
+
+  const handleRecharge = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser || !rechargeAmount) return;
+
+    try {
+      setRechargeLoading(true);
+      await api.post('/admin/users/recharge', {
+        user_id: selectedUser.id,
+        amount: parseFloat(rechargeAmount),
+        remark: rechargeRemark
+      });
+      
+      alert(t('admin.recharge_success'));
+      closeRechargeModal();
+      fetchUsers(); // Refresh to show new balance
+    } catch (error: any) {
+      console.error('Failed to recharge user:', error);
+      alert(error.response?.data?.error || t('admin.recharge_failed'));
+    } finally {
+      setRechargeLoading(false);
     }
   };
 
@@ -155,6 +199,13 @@ export default function AdminUsers() {
                       {new Date(user.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-right flex justify-end gap-2">
+                      <button
+                        onClick={() => openRechargeModal(user)}
+                        className="p-2 hover:bg-gray-700 rounded-lg text-green-400 hover:text-green-300 transition-colors"
+                        title={t('admin.gift_balance')}
+                      >
+                        <DollarSign className="w-4 h-4" />
+                      </button>
                       <Link 
                         to={`/admin/users/${user.id}`}
                         className="p-2 hover:bg-gray-700 rounded-lg text-blue-400 hover:text-blue-300 transition-colors"
@@ -200,6 +251,77 @@ export default function AdminUsers() {
           </button>
         </div>
       </div>
+
+      {/* Recharge Modal */}
+      {showRechargeModal && selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-gray-800 rounded-xl border border-gray-700 w-full max-w-md shadow-xl">
+            <div className="flex justify-between items-center p-4 border-b border-gray-700">
+              <h3 className="text-lg font-semibold text-white">{t('admin.gift_balance')}</h3>
+              <button onClick={closeRechargeModal} className="text-gray-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleRecharge} className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">
+                  {t('admin.user')}
+                </label>
+                <div className="text-white bg-gray-900 px-3 py-2 rounded border border-gray-700">
+                  {selectedUser.email}
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">
+                  {t('admin.amount')}
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  required
+                  value={rechargeAmount}
+                  onChange={(e) => setRechargeAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full bg-gray-900 border border-gray-700 text-white px-3 py-2 rounded focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">
+                  {t('admin.remark')}
+                </label>
+                <input
+                  type="text"
+                  value={rechargeRemark}
+                  onChange={(e) => setRechargeRemark(e.target.value)}
+                  placeholder={t('admin.remark_placeholder')}
+                  className="w-full bg-gray-900 border border-gray-700 text-white px-3 py-2 rounded focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={closeRechargeModal}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded transition-colors"
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  type="submit"
+                  disabled={rechargeLoading}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  {rechargeLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {t('common.confirm')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
