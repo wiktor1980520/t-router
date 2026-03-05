@@ -26,12 +26,21 @@
     "balance": "余额",
     "admin_role": "管理员"
   },
+  "playground": {
+    "title": "模型在线测试",
+    "select_model": "选择模型",
+    "clear_history": "清空历史",
+    "empty_state": "开始与 AI 对话...",
+    "input_placeholder": "输入消息...",
+    "send": "发送"
+  },
   "nav": {
     "dashboard": "仪表盘",
     "models": "模型管理",
     "api_keys": "API 密钥",
     "billing": "账单充值",
     "settings": "系统设置",
+    "playground": "模型对话",
     "sign_out": "退出登录",
     "admin": "管理后台"
   },

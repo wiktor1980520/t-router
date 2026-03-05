@@ -113,23 +113,24 @@ func (p *OpenAIProvider) ChatCompletionStream(ctx context.Context, req *models.C
 			continue
 		}
 
-		if !strings.HasPrefix(line, "data: ") {
-			continue
-		}
+		// Handle data: prefix
+		if strings.HasPrefix(line, "data:") {
+			data := strings.TrimPrefix(line, "data:")
+			data = strings.TrimSpace(data)
+			if data == "[DONE]" {
+				break
+			}
 
-		data := strings.TrimPrefix(line, "data: ")
-		if data == "[DONE]" {
-			break
-		}
+			var streamResp models.StreamResponse
+			if err := json.Unmarshal([]byte(data), &streamResp); err != nil {
+				// Log warning but continue? Or error out?
+				// For now, continue
+				fmt.Printf("Warning: failed to unmarshal stream response: %v, data: %s\n", err, data)
+				continue
+			}
 
-		var streamResp models.StreamResponse
-		if err := json.Unmarshal([]byte(data), &streamResp); err != nil {
-			// Log warning but continue? Or error out?
-			// For now, continue
-			continue
+			responseChan <- &streamResp
 		}
-
-		responseChan <- &streamResp
 	}
 
 	return nil

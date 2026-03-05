@@ -45,6 +45,21 @@ func ListApiKeysHandler(c *gin.Context) {
 
 func CreateApiKeyHandler(c *gin.Context) {
 	userID := c.GetString("user_id")
+	
+	// Check if user is admin
+	var user models.User
+	if err := config.DB.First(&user, "id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user"})
+		return
+	}
+	
+	// Previous restriction removed as per new requirement: "Account must have a usable API Key to call the large model"
+	// If Admins cannot create API Keys, they cannot use the chat feature.
+	// if user.IsAdmin {
+	// 	c.JSON(http.StatusForbidden, gin.H{"error": "Administrators cannot create API keys"})
+	// 	return
+	// }
+
 	var req models.CreateApiKeyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

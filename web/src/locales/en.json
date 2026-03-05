@@ -26,12 +26,21 @@
     "balance": "Balance",
     "admin_role": "Admin"
   },
+  "playground": {
+    "title": "AI Playground",
+    "select_model": "Select a model",
+    "clear_history": "Clear history",
+    "empty_state": "Start a conversation with the AI...",
+    "input_placeholder": "Type your message here...",
+    "send": "Send"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "models": "Models",
     "api_keys": "API Keys",
     "billing": "Billing",
     "settings": "Settings",
+    "playground": "Playground",
     "sign_out": "Sign out",
     "admin": "Admin Panel"
   },

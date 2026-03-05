@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../lib/api';
 import { Plus, Trash2, Copy, Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
 
 const ApiKeys = () => {
   const [keys, setKeys] = useState([]);
@@ -11,6 +12,7 @@ const ApiKeys = () => {
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
   const { t } = useTranslation();
+  const { user } = useAuth(); // Get user from AuthContext
 
   useEffect(() => {
     fetchKeys();
@@ -62,13 +64,13 @@ const ApiKeys = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-white">{t('keys.title')}</h1>
-        <button
-          onClick={() => setShowNewKeyModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-        >
-          <Plus className="mr-2 h-5 w-5" />
-          {t('keys.create_new')}
-        </button>
+          <button
+            onClick={() => setShowNewKeyModal(true)}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="mr-2 h-5 w-5" />
+            {t('keys.create_new')}
+          </button>
       </div>
 
       {/* Keys List */}

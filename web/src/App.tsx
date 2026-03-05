@@ -9,6 +9,7 @@ import Models from './pages/Models';
 import ApiKeys from './pages/Keys';
 import Billing from './pages/Billing';
 import Settings from './pages/Settings';
+import Playground from './pages/Playground';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUsers from './pages/admin/Users';
 import AdminUserDetail from './pages/admin/UserDetail';
@@ -53,6 +54,7 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="models" element={<Models />} />
             <Route path="keys" element={<ApiKeys />} />
+            <Route path="playground" element={<Playground />} />
             <Route path="billing" element={<Billing />} />
             <Route path="settings" element={<Settings />} />
           </Route>

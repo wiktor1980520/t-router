@@ -95,6 +95,9 @@ func main() {
 			protected.GET("/providers", api.ListProvidersHandler)
 			protected.GET("/routes", api.ListModelRoutesHandler)
 			protected.GET("/models", api.ListModelsHandler)
+			
+			// Playground Chat Endpoint (JWT Auth)
+			protected.POST("/chat/completions", api.ChatCompletionHandler)
 		}
 
 		// Admin Routes

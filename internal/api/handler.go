@@ -35,6 +35,24 @@ func ChatCompletionHandler(c *gin.Context) {
 		return
 	}
 
+	// Ensure User has a valid API Key (even if authenticated via JWT)
+	// This is a business policy requirement: "Account must have a usable API Key to call the large model"
+	userID := c.GetString("user_id")
+	if userID != "" {
+		// Check if user has at least one active API key
+		var apiKeyCount int64
+		if err := config.DB.Model(&models.ApiKey{}).Where("user_id = ? AND is_active = ?", userID, true).Count(&apiKeyCount).Error; err != nil {
+			log.Printf("Error checking API key for user %s: %v", userID, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error checking permissions"})
+			return
+		}
+
+		if apiKeyCount == 0 {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Account must have a valid API Key to use this service. Please create one in the dashboard."})
+			return
+		}
+	}
+
 	// Get User Preference
 	routingPreference := "lowest_cost" // Default
 	if apiKeyVal, exists := c.Get("api_key"); exists {
@@ -46,6 +64,7 @@ func ChatCompletionHandler(c *gin.Context) {
 	}
 
 	// Route Request (Get list of candidates for fallback)
+	log.Printf("Routing request %s for model %s", requestID, req.Model)
 	routeResults, err := router.GetRouter().Route(req.Model, routingPreference)
 	if err != nil {
 		log.Printf("Routing error for model %s: %v", req.Model, err)
@@ -56,6 +75,7 @@ func ChatCompletionHandler(c *gin.Context) {
 	var lastErr error
 	// Fallback Loop
 	for _, result := range routeResults {
+		log.Printf("Attempting provider %s (Route ID: %d) for request %s", result.Provider.Name(), result.ModelRoute.ID, requestID)
 		if req.Stream {
 			err = attemptStreamResponse(c, result.Provider, result.ModelRoute, &req, requestID, startTime)
 		} else {
@@ -63,6 +83,7 @@ func ChatCompletionHandler(c *gin.Context) {
 		}
 
 		if err == nil {
+			log.Printf("Provider %s succeeded for request %s", result.Provider.Name(), requestID)
 			return // Success!
 		}
 		
@@ -72,7 +93,6 @@ func ChatCompletionHandler(c *gin.Context) {
 
 	// All providers failed
 	// Audit the failure against the last attempted provider
-	userID := c.GetString("user_id")
 	if userID != "" && len(routeResults) > 0 {
 		lastRoute := routeResults[len(routeResults)-1]
 		auditLog := models.AuditLog{
@@ -133,12 +153,15 @@ func attemptStreamResponse(c *gin.Context, p provider.Provider, route *models.Mo
 	}()
 
 	// Wait for first event (data or error) to decide if we commit headers
+	log.Printf("Waiting for first chunk from provider for request %s", requestID)
 	select {
 	case err := <-errChan:
+		log.Printf("Received error from provider channel for request %s: %v", requestID, err)
 		if err != nil {
 			return err // Failed before sending data, allow fallback
 		}
 	case firstChunk, ok := <-respChan:
+		log.Printf("Received first chunk from provider channel for request %s. OK: %v", requestID, ok)
 		if !ok {
 			// Stream closed immediately? Treat as error for fallback purposes
 			return fmt.Errorf("stream closed unexpectedly without data")
@@ -151,6 +174,7 @@ func attemptStreamResponse(c *gin.Context, p provider.Provider, route *models.Mo
 		c.Header("Transfer-Encoding", "chunked")
 		
 		// Send first chunk
+		// Note: SSEvent adds "data:" prefix automatically
 		c.SSEvent("", firstChunk)
 
 		var finalUsage *models.Usage
@@ -159,6 +183,7 @@ func attemptStreamResponse(c *gin.Context, p provider.Provider, route *models.Mo
 		// Capture first chunk content
 		if len(firstChunk.Choices) > 0 {
 			completionBuilder.WriteString(firstChunk.Choices[0].Delta.Content)
+			completionBuilder.WriteString(firstChunk.Choices[0].Delta.ReasoningContent)
 		}
 
 		// Continue streaming the rest
@@ -166,13 +191,14 @@ func attemptStreamResponse(c *gin.Context, p provider.Provider, route *models.Mo
 			select {
 			case chunk, ok := <-respChan:
 				if !ok {
-					c.SSEvent("", " [DONE]")
+					c.Writer.WriteString("data: [DONE]\n\n")
 					return false
 				}
 				
 				// Accumulate content
 				if len(chunk.Choices) > 0 {
 					completionBuilder.WriteString(chunk.Choices[0].Delta.Content)
+					completionBuilder.WriteString(chunk.Choices[0].Delta.ReasoningContent)
 				}
 				
 				if chunk.Usage != nil {
@@ -184,7 +210,9 @@ func attemptStreamResponse(c *gin.Context, p provider.Provider, route *models.Mo
 			case err := <-errChan:
 				if err != nil {
 					log.Printf("Stream error mid-stream: %v", err)
-					c.SSEvent("error", err.Error())
+					// In SSE, we can't easily change status code once headers are sent.
+					// We could send a special error event, but client needs to handle it.
+					// For now, just log and stop.
 					return false
 				}
 				return false
