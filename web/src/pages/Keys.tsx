@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../lib/api';
 import { Plus, Trash2, Copy, Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../context/AuthContext';
+// import { useAuth } from '../context/AuthContext';
 
 const ApiKeys = () => {
   const [keys, setKeys] = useState([]);
@@ -12,7 +12,7 @@ const ApiKeys = () => {
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
   const { t } = useTranslation();
-  const { user } = useAuth(); // Get user from AuthContext
+  // const { user } = useAuth(); // Get user from AuthContext
 
   useEffect(() => {
     fetchKeys();

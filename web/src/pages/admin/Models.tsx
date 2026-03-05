@@ -6,8 +6,8 @@ import {
   Plus, 
   Trash2, 
   Loader2,
-  Save,
-  X
+  // Save,
+  // X
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import api from '../../lib/api';

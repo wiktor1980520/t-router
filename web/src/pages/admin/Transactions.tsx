@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { 
   ArrowLeftRight, 
   Search, 
-  ChevronLeft, 
-  ChevronRight, 
+  // ChevronLeft, 
+  // ChevronRight, 
   Loader2,
   CheckCircle,
   XCircle,
