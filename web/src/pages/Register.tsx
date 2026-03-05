@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { UserPlus } from 'lucide-react';
 
 const RegisterPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -91,7 +91,17 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-950 px-4 py-12 sm:px-6 lg:px-8">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-950 px-4 py-12 sm:px-6 lg:px-8 relative">
+      <div className="absolute top-4 right-4">
+        <select
+          value={i18n.language}
+          onChange={(e) => i18n.changeLanguage(e.target.value)}
+          className="bg-gray-900 text-gray-300 text-sm border border-gray-700 rounded-md px-3 py-1.5 focus:outline-none focus:border-blue-500 cursor-pointer hover:border-gray-600 transition-colors"
+        >
+          <option value="en">English</option>
+          <option value="zh">简体中文</option>
+        </select>
+      </div>
       <div className="w-full max-w-md space-y-8 bg-gray-900 p-8 rounded-lg border border-gray-800">
         <div className="text-center">
           <div className="mx-auto h-12 w-12 bg-blue-600 rounded-xl flex items-center justify-center">
@@ -115,15 +125,18 @@ const RegisterPage = () => {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
-            <div>
+            <div className="relative">
               <input
                 type="tel"
                 required
-                className="relative block w-full border-0 bg-gray-800 py-2.5 px-3 text-gray-100 ring-1 ring-inset ring-gray-700 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                className="relative block w-full border-0 bg-gray-800 py-2.5 pl-12 pr-3 text-gray-100 ring-1 ring-inset ring-gray-700 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
                 placeholder={t('auth.phone')}
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
               />
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-20">
+                <span className="text-gray-100 sm:text-sm">+86</span>
+              </div>
             </div>
             <div className="relative">
               <input
@@ -138,7 +151,7 @@ const RegisterPage = () => {
                 type="button"
                 onClick={handleSendCode}
                 disabled={countdown > 0}
-                className="absolute right-2 top-2.5 z-20 text-sm font-medium text-blue-500 hover:text-blue-400 disabled:text-gray-500 disabled:cursor-not-allowed"
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-20 text-sm font-medium text-blue-500 hover:text-blue-400 disabled:text-gray-500 disabled:cursor-not-allowed"
               >
                 {countdown > 0 ? `${countdown}s` : t('auth.send_code')}
               </button>

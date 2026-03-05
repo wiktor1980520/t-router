@@ -91,18 +91,31 @@ func main() {
 			
 			protected.GET("/user/audit_logs", api.GetAuditLogsHandler)
 
-			// Provider & Model Management
+			// Read-only access for regular users
 			protected.GET("/providers", api.ListProvidersHandler)
-			protected.POST("/providers", api.CreateProviderHandler)
-			protected.DELETE("/providers/:id", api.DeleteProviderHandler)
-			
 			protected.GET("/routes", api.ListModelRoutesHandler)
-			protected.POST("/routes", api.CreateModelRouteHandler)
-			protected.DELETE("/routes/:id", api.DeleteModelRouteHandler)
-
 			protected.GET("/models", api.ListModelsHandler)
-			protected.POST("/models", api.CreateModelHandler)
-			protected.DELETE("/models/:id", api.DeleteModelHandler)
+		}
+
+		// Admin Routes
+		admin := dashboard.Group("/admin")
+		admin.Use(api.JWTMiddleware(), api.AdminMiddleware())
+		{
+			// User Management
+			admin.GET("/users", api.AdminListUsersHandler)
+			admin.GET("/users/:id", api.AdminGetUserHandler)
+			admin.PUT("/users/:id/status", api.AdminToggleUserStatusHandler)
+			admin.GET("/transactions", api.AdminGetTransactionsHandler)
+
+			// Provider & Model Management (Write Access)
+			admin.POST("/providers", api.CreateProviderHandler)
+			admin.DELETE("/providers/:id", api.DeleteProviderHandler)
+			
+			admin.POST("/routes", api.CreateModelRouteHandler)
+			admin.DELETE("/routes/:id", api.DeleteModelRouteHandler)
+			
+			admin.POST("/models", api.CreateModelHandler)
+			admin.DELETE("/models/:id", api.DeleteModelHandler)
 		}
 	}
 

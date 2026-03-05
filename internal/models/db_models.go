@@ -15,6 +15,7 @@ type User struct {
 	Balance   float64   `gorm:"type:decimal(20,8);default:0" json:"balance"`
 	BalanceAlertThreshold float64 `gorm:"type:decimal(20,8);default:10.00" json:"balance_alert_threshold"` // Default alert at $10
 	IsActive  bool      `gorm:"default:true" json:"is_active"`
+	IsAdmin   bool      `gorm:"default:false" json:"is_admin"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	

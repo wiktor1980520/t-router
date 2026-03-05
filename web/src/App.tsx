@@ -9,6 +9,11 @@ import Models from './pages/Models';
 import ApiKeys from './pages/Keys';
 import Billing from './pages/Billing';
 import Settings from './pages/Settings';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminUsers from './pages/admin/Users';
+import AdminUserDetail from './pages/admin/UserDetail';
+import AdminModels from './pages/admin/Models';
+import AdminTransactions from './pages/admin/Transactions';
 import Layout from './components/Layout';
 
 const ProtectedRoute = ({ children }: { children: ReactElement }) => {
@@ -50,6 +55,15 @@ function App() {
             <Route path="keys" element={<ApiKeys />} />
             <Route path="billing" element={<Billing />} />
             <Route path="settings" element={<Settings />} />
+          </Route>
+
+          {/* Admin Routes */}
+          <Route path="/admin" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="users/:id" element={<AdminUserDetail />} />
+            <Route path="models" element={<AdminModels />} />
+            <Route path="transactions" element={<AdminTransactions />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

@@ -57,7 +57,7 @@ const Dashboard = () => {
                 <dl>
                   <dt className="text-sm font-medium text-gray-400 truncate">{t('dashboard.current_balance')}</dt>
                   <dd>
-                    <div className="text-lg font-medium text-white">¥{user?.balance.toFixed(8)}</div>
+                    <div className="text-lg font-medium text-white">¥{user?.balance.toFixed(2)}</div>
                   </dd>
                 </dl>
               </div>
@@ -66,7 +66,7 @@ const Dashboard = () => {
           <div className="bg-gray-800 px-5 py-3">
             <div className="text-sm">
               <span className="font-medium text-gray-400">{t('dashboard.alert_threshold')}: </span>
-              <span className="text-white">¥{user?.balance_alert_threshold.toFixed(8)}</span>
+              <span className="text-white">¥{user?.balance_alert_threshold.toFixed(2)}</span>
             </div>
           </div>
         </div>

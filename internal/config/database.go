@@ -56,8 +56,44 @@ func InitDB() {
 	
 	// Seed some initial data for testing if empty
 	seedData()
+	// Seed Admin User
+	seedAdmin()
 
 	log.Println("Database connected and migrated successfully.")
+}
+
+func seedAdmin() {
+	var admin models.User
+	// Check if admin exists by email
+	err := DB.Where("email = ?", "admin@t-router.com").First(&admin).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			log.Println("Seeding Admin User...")
+			hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("Admin@123"), bcrypt.DefaultCost)
+			phone := "13923708510"
+			
+			admin = models.User{
+				Email:        "admin@t-router.com",
+				Phone:        &phone,
+				PasswordHash: string(hashedPassword),
+				Balance:      1000.00, 
+				IsActive:     true,
+				IsAdmin:      true,
+			}
+			if err := DB.Create(&admin).Error; err != nil {
+				log.Printf("Failed to create admin user: %v", err)
+			} else {
+				log.Printf("Admin User Created: admin@t-router.com / Admin@123")
+			}
+		}
+	} else {
+		// Ensure IsAdmin is true if user exists
+		if !admin.IsAdmin {
+			admin.IsAdmin = true
+			DB.Save(&admin)
+			log.Println("Promoted existing user admin@t-router.com to Admin.")
+		}
+	}
 }
 
 func seedData() {

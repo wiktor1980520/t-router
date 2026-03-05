@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Key, CreditCard, LogOut, Settings, Menu, X, Database } from 'lucide-react';
+import { LayoutDashboard, Key, CreditCard, LogOut, Settings, Menu, X, Database, ShieldCheck } from 'lucide-react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 
@@ -18,6 +18,10 @@ const Layout = () => {
     { name: t('nav.billing'), href: '/dashboard/billing', icon: CreditCard },
     { name: t('nav.settings'), href: '/dashboard/settings', icon: Settings },
   ];
+
+  if (user?.is_admin) {
+    navigation.push({ name: t('nav.admin'), href: '/admin', icon: ShieldCheck });
+  }
 
   return (
     <div className="flex h-screen bg-gray-950 text-gray-100 overflow-hidden">
@@ -91,7 +95,7 @@ const Layout = () => {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">{user?.email}</p>
-              <p className="text-xs text-gray-500 truncate">Balance: ¥{user?.balance?.toFixed(8) || '0.00000000'}</p>
+              <p className="text-xs text-gray-500 truncate">{t('common.balance')}: ¥{user?.balance?.toFixed(2) || '0.00'}</p>
             </div>
           </div>
           <button

@@ -69,7 +69,7 @@ const Billing = () => {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-medium text-gray-300">{t('dashboard.current_balance')}</h2>
-            <p className="mt-2 text-3xl font-bold text-white">¥{user?.balance.toFixed(8)}</p>
+            <p className="mt-2 text-3xl font-bold text-white">¥{user?.balance.toFixed(2)}</p>
           </div>
           <button
             onClick={() => setShowRechargeModal(true)}

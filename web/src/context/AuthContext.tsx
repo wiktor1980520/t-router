@@ -8,6 +8,7 @@ interface User {
   balance: number;
   balance_alert_threshold: number;
   is_active: boolean;
+  is_admin: boolean;
   created_at: string;
 }
 

@@ -30,10 +30,10 @@ func JWTMiddleware() gin.HandlerFunc {
 		}
 
 		tokenString := parts[1]
-
+		
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, http.ErrAbortHandler
+				return nil, jwt.ErrSignatureInvalid
 			}
 			return jwtSecret, nil
 		})
@@ -104,7 +104,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		if !user.IsActive {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-				"error": "User account is suspended",
+				"error": "User account is disabled",
 			})
 			return
 		}
@@ -116,10 +116,30 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// 3. Set Context
 		c.Set(ContextKeyUser, &user)
-		c.Set("user_id", user.ID)
 		c.Set(ContextKeyApiKey, &apiKey)
+		c.Next()
+	}
+}
+
+func AdminMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, exists := c.Get("user_id")
+		if !exists {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in context"})
+			return
+		}
+
+		var user models.User
+		if err := config.DB.First(&user, "id = ?", userID).Error; err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+			return
+		}
+
+		if !user.IsAdmin {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
+			return
+		}
 
 		c.Next()
 	}
