@@ -8,6 +8,8 @@ COPY . .
 
 # Build the binary
 # -s -w: Strip debug symbols to reduce binary size
+# Must initialize module first if not present in container (though COPY should bring it)
+RUN go mod download
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-s -w" -o trouter-gateway cmd/gateway/main.go
 
 # Run Stage
