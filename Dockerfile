@@ -13,16 +13,6 @@ RUN apk add --no-cache git
 # Copy source code
 COPY . .
 
-# Auto-clone source code if go.mod is missing (handles case where user only uploaded Dockerfile)
-# ADD instruction keeps the cache fresh when main branch updates
-ADD https://api.github.com/repos/wiktor1980520/t-router/commits/main /tmp/latest_commit
-RUN if [ ! -f go.mod ]; then \
-    echo "go.mod not found, cloning from GitHub..."; \
-    git clone https://github.com/wiktor1980520/t-router.git /tmp/source && \
-    cp -r /tmp/source/* . && \
-    rm -rf /tmp/source; \
-    fi
-
 # Build the binary
 # -s -w: Strip debug symbols to reduce binary size
 RUN ls -la
