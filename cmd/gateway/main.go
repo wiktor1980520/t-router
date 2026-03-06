@@ -6,7 +6,9 @@ import (
 	"trouter/internal/api"
 	adminApi "trouter/internal/api/admin"
 	"trouter/internal/config"
+	"trouter/internal/router"
 	"trouter/internal/sms"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -29,6 +31,17 @@ func main() {
 	} else {
 		log.Println("SMS Provider initialized successfully.")
 	}
+
+	// Start Health Check Worker
+	// Default 60 seconds, can be overridden by HEALTH_CHECK_INTERVAL environment variable
+	intervalStr := os.Getenv("HEALTH_CHECK_INTERVAL")
+	interval := 60 * time.Second
+	if intervalStr != "" {
+		if d, err := time.ParseDuration(intervalStr); err == nil {
+			interval = d
+		}
+	}
+	router.StartHealthCheckWorker(interval)
 	
 	r := gin.Default()
 

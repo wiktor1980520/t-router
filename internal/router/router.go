@@ -74,10 +74,23 @@ func (r *Router) Route(modelName string, preference string) ([]*RouteResult, err
 		// Because we want to strictly use the cheapest one first.
 
 	case "lowest_latency":
-		// TODO: Implement real latency tracking.
-		// For now, use Priority as a proxy but maybe shuffle equal priorities?
+		// Sort by Latency Ascending (Lower is better)
+		// Latency is updated by background health check
 		sort.Slice(routes, func(i, j int) bool {
-			return routes[i].Priority > routes[j].Priority
+			// If Latency is 0 (never checked), treat as high latency (push to bottom)
+			latI := routes[i].Latency
+			latJ := routes[j].Latency
+			
+			if latI == 0 && latJ == 0 {
+				return routes[i].Priority > routes[j].Priority
+			}
+			if latI == 0 { return false } // I is unknown -> bigger than J
+			if latJ == 0 { return true }  // J is unknown -> bigger than I
+
+			if latI == latJ {
+				return routes[i].Priority > routes[j].Priority
+			}
+			return latI < latJ
 		})
 
 	default: // "priority" or "load_balance" (default behavior)
@@ -189,7 +202,7 @@ func (r *Router) getProviderInstance(p *models.Provider) (provider.Provider, err
 	}
 
 	// Create new instance
-	prov, err := factory.NewProvider(p.Type, p.BaseURL, p.ApiKey)
+	prov, err := factory.NewProvider(p)
 	if err != nil {
 		return nil, err
 	}

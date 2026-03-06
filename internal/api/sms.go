@@ -21,11 +21,11 @@ func SendCodeHandler(c *gin.Context) {
 		return
 	}
 
-	// Verify Turnstile (skip for now or implement if key is set)
-	// if !VerifyTurnstile(req.TurnstileToken, c.ClientIP()) {
-	// 	c.JSON(http.StatusForbidden, gin.H{"error": "Turnstile verification failed"})
-	// 	return
-	// }
+	// Verify Turnstile
+	if !VerifyTurnstile(req.TurnstileToken, c.ClientIP()) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Turnstile verification failed"})
+		return
+	}
 
 	// Generate 6-digit code
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))

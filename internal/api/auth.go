@@ -77,10 +77,10 @@ func RegisterHandler(c *gin.Context) {
 	}
 
 	// Verify Turnstile
-	// if !VerifyTurnstile(req.TurnstileToken, c.ClientIP()) {
-	// 	c.JSON(http.StatusForbidden, gin.H{"error": "Turnstile verification failed"})
-	// 	return
-	// }
+	if !VerifyTurnstile(req.TurnstileToken, c.ClientIP()) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Turnstile verification failed"})
+		return
+	}
 
 	// Check if user exists
 	var existingUser models.User
@@ -173,10 +173,10 @@ func LoginHandler(c *gin.Context) {
 	}
 
 	// Verify Turnstile
-	// if !VerifyTurnstile(req.TurnstileToken, c.ClientIP()) {
-	// 	c.JSON(http.StatusForbidden, gin.H{"error": "Turnstile verification failed"})
-	// 	return
-	// }
+	if !VerifyTurnstile(req.TurnstileToken, c.ClientIP()) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Turnstile verification failed"})
+		return
+	}
 
 	var user models.User
 	if err := config.DB.Where("email = ?", req.Email).First(&user).Error; err != nil {
