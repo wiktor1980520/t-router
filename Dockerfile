@@ -3,15 +3,7 @@ FROM golang:alpine AS builder
 
 WORKDIR /app
 
-# Install git and build tools if needed
-RUN apk add --no-cache git
-
-# Copy go.mod and go.sum first for dependency caching
-COPY go.mod ./
-# COPY go.sum ./
-RUN go mod download
-
-# Copy source code
+# Copy source code first (simplest approach for now)
 COPY . .
 
 # Build the binary
