@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   Settings, 
-  Save, 
   RotateCcw,
   Loader2,
   Edit2,

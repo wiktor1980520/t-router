@@ -1,17 +1,26 @@
 version: '3.8'
 
 services:
-  db:
-    image: postgres:15-alpine
+  trouter-backend:
+    build: .
+    container_name: trouter-backend
     restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres_password
-      POSTGRES_DB: trouter
     ports:
-      - "5432:5432"
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - SMS_PROVIDER=${SMS_PROVIDER}
+      - SMS_API_KEY=${SMS_API_KEY}
+      - SMS_TEMPLATE_ID=${SMS_TEMPLATE_ID}
+      - PORT=8080
+      - HEALTH_CHECK_INTERVAL=${HEALTH_CHECK_INTERVAL:-60s}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./data:/app/data # For SQLite database or logs if needed
+    # networks:
+    #   - 1panel-network
 
-volumes:
-  postgres_data:
+# networks:
+#   1panel-network:
+#     external: true
+#     name: 1panel-network
