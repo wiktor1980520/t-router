@@ -1,6 +1,6 @@
 # Build Stage
 # Use public.ecr.aws to avoid Docker Hub rate limits and 1Panel mirror issues
-FROM public.ecr.aws/docker/library/golang:1.24-alpine AS builder
+FROM public.ecr.aws/docker/library/golang:1.25-alpine AS builder
 
 WORKDIR /app
 
