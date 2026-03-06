@@ -111,6 +111,7 @@ type ModelRoute struct {
 	CostInput  float64   `gorm:"type:decimal(20,10);default:0" json:"cost_input"`  // Cost per 1M tokens
 	CostOutput float64   `gorm:"type:decimal(20,10);default:0" json:"cost_output"` // Cost per 1M tokens
 	Priority   int       `gorm:"default:0" json:"priority"`                        // Higher = preferred
+	Weight     int       `gorm:"default:10" json:"weight"`                         // For load balancing
 	IsActive   bool      `gorm:"default:true" json:"is_active"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
