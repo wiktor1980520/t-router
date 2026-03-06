@@ -12,6 +12,7 @@ COPY . .
 
 # Build the binary
 # -s -w: Strip debug symbols to reduce binary size
+RUN ls -la
 RUN go mod download
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-s -w" -o trouter-gateway cmd/gateway/main.go
 
