@@ -5,6 +5,7 @@ import {
   Network, 
   Plus, 
   Trash2, 
+  Edit,
   Loader2,
   // Save,
   // X
@@ -40,6 +41,9 @@ interface ModelRoute {
   cost_output: number;
   priority: number;
   provider?: Provider;
+  latency?: number;
+  last_check?: string;
+  failure_count?: number;
 }
 
 // --- Component ---
@@ -58,6 +62,7 @@ export default function AdminModels() {
   const [newModel, setNewModel] = useState<Partial<Model>>({});
 
   const [showProviderForm, setShowProviderForm] = useState(false);
+  const [isEditingProvider, setIsEditingProvider] = useState(false);
   const [newProvider, setNewProvider] = useState<Partial<Provider> & { api_key?: string }>({});
 
   const [showRouteForm, setShowRouteForm] = useState(false);
@@ -112,14 +117,25 @@ export default function AdminModels() {
 
   const handleCreateProvider = async () => {
     try {
-      await api.post('/admin/providers', newProvider);
+      if (isEditingProvider && newProvider.id) {
+        await api.put(`/admin/providers/${newProvider.id}`, newProvider);
+      } else {
+        await api.post('/admin/providers', newProvider);
+      }
       setShowProviderForm(false);
       setNewProvider({});
+      setIsEditingProvider(false);
       fetchData();
     } catch (error) {
-      console.error('Failed to create provider:', error);
-      alert(t('admin.error_create_provider'));
+      console.error('Failed to save provider:', error);
+      alert(t(isEditingProvider ? 'admin.error_update_provider' : 'admin.error_create_provider'));
     }
+  };
+
+  const handleEditProvider = (provider: Provider) => {
+    setNewProvider({ ...provider, api_key: '' }); // Clear API key for security or keep empty to not update
+    setIsEditingProvider(true);
+    setShowProviderForm(true);
   };
 
   const handleDeleteProvider = async (id: number) => {
@@ -278,7 +294,10 @@ export default function AdminModels() {
                       <td className="px-6 py-4 capitalize">{p.type}</td>
                       <td className="px-6 py-4 font-mono text-xs">{p.base_url}</td>
                       <td className="px-6 py-4">{p.weight}</td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4 text-right flex justify-end gap-2">
+                        <button onClick={() => handleEditProvider(p)} className="p-2 hover:bg-blue-500/10 text-blue-400 rounded-lg transition-colors">
+                          <Edit className="w-4 h-4" />
+                        </button>
                         <button onClick={() => handleDeleteProvider(p.id)} className="p-2 hover:bg-red-500/10 text-red-400 rounded-lg transition-colors">
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -302,6 +321,8 @@ export default function AdminModels() {
                     <th className="px-6 py-4">{t('admin.cost_input')}</th>
                     <th className="px-6 py-4">{t('admin.cost_output')}</th>
                     <th className="px-6 py-4">{t('admin.priority')}</th>
+                    <th className="px-6 py-4">{t('admin.latency')}</th>
+                    <th className="px-6 py-4">{t('admin.status')}</th>
                     <th className="px-6 py-4 text-right">{t('common.actions')}</th>
                   </tr>
                 </thead>
@@ -314,6 +335,26 @@ export default function AdminModels() {
                       <td className="px-6 py-4">${r.cost_input}</td>
                       <td className="px-6 py-4">${r.cost_output}</td>
                       <td className="px-6 py-4">{r.priority}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2 py-1 rounded text-xs font-mono ${
+                          !r.latency ? 'bg-gray-700 text-gray-400' :
+                          r.latency < 200 ? 'bg-green-500/20 text-green-400' : 
+                          r.latency < 1000 ? 'bg-yellow-500/20 text-yellow-400' : 
+                          'bg-red-500/20 text-red-400'
+                        }`}>
+                          {r.latency ? `${r.latency}ms` : 'N/A'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-xs text-gray-400">
+                        <div className="flex flex-col gap-1">
+                          <span>{r.last_check ? new Date(r.last_check).toLocaleString() : '-'}</span>
+                          {r.failure_count !== undefined && r.failure_count > 0 && (
+                            <span className={`text-xs ${r.failure_count >= 3 ? 'text-red-400 font-bold' : 'text-yellow-500'}`}>
+                              {r.failure_count} failures
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-6 py-4 text-right">
                         <button onClick={() => handleDeleteRoute(r.id)} className="p-2 hover:bg-red-500/10 text-red-400 rounded-lg transition-colors">
                           <Trash2 className="w-4 h-4" />
@@ -388,11 +429,11 @@ export default function AdminModels() {
         </div>
       )}
 
-      {/* Create Provider Modal */}
+      {/* Create/Edit Provider Modal */}
       {showProviderForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-gray-800 rounded-xl p-6 w-full max-w-lg border border-gray-700">
-            <h2 className="text-xl font-bold text-white mb-4">{t('admin.add_new_provider')}</h2>
+            <h2 className="text-xl font-bold text-white mb-4">{isEditingProvider ? t('admin.edit_provider') : t('admin.add_new_provider')}</h2>
             <div className="space-y-4">
               <input 
                 placeholder={t('admin.provider_name_placeholder')} 
@@ -417,7 +458,7 @@ export default function AdminModels() {
                 onChange={e => setNewProvider({...newProvider, base_url: e.target.value})}
               />
               <input 
-                placeholder={t('models.api_key')} 
+                placeholder={t(isEditingProvider ? 'models.api_key_placeholder_edit' : 'models.api_key')} 
                 type="password"
                 className="w-full bg-gray-900 border border-gray-700 rounded p-2 text-white"
                 value={newProvider.api_key || ''}
@@ -432,8 +473,12 @@ export default function AdminModels() {
               />
             </div>
             <div className="flex justify-end gap-2 mt-6">
-              <button onClick={() => setShowProviderForm(false)} className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded transition-colors">{t('common.cancel')}</button>
-              <button onClick={handleCreateProvider} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">{t('common.create')}</button>
+              <button onClick={() => {
+                setShowProviderForm(false);
+                setIsEditingProvider(false);
+                setNewProvider({});
+              }} className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded transition-colors">{t('common.cancel')}</button>
+              <button onClick={handleCreateProvider} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">{t(isEditingProvider ? 'common.save' : 'common.create')}</button>
             </div>
           </div>
         </div>

@@ -106,10 +106,13 @@ export default function SystemConfigPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-          <Settings className="w-6 h-6" />
-          {t('admin.system_config')}
-        </h1>
+        <div>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <Settings className="w-6 h-6" />
+            {t('admin.system_config')}
+          </h1>
+          <p className="text-gray-400 mt-1 ml-8">{t('admin.system_config_desc')}</p>
+        </div>
         <button 
           onClick={fetchConfigs} 
           className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"

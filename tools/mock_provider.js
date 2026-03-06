@@ -4,9 +4,9 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   let delay = 0;
 
-  if (url.pathname === '/fast') {
+  if (url.pathname.startsWith('/fast')) {
     delay = 10;
-  } else if (url.pathname === '/slow') {
+  } else if (url.pathname.startsWith('/slow')) {
     delay = 500;
   } else {
     delay = 50; // default

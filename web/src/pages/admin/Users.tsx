@@ -106,7 +106,13 @@ export default function AdminUsers() {
       fetchUsers(); // Refresh to show new balance
     } catch (error: any) {
       console.error('Failed to recharge user:', error);
-      alert(error.response?.data?.error || t('admin.recharge_failed'));
+      let msg = t('admin.recharge_failed');
+      if (error.response?.data?.error) {
+        msg = `${msg}: ${error.response.data.error}`;
+      } else if (error.message) {
+        msg = `${msg}: ${error.message}`;
+      }
+      alert(msg);
     } finally {
       setRechargeLoading(false);
     }

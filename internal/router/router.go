@@ -56,11 +56,32 @@ func (r *Router) Route(modelName string, preference string) ([]*RouteResult, err
 		return nil, fmt.Errorf("no active route found for model: %s", modelName)
 	}
 
+	// 1.5. Separate Healthy vs Unhealthy Routes
+	// Consider routes with FailureCount >= 3 as "Unhealthy" and push them to the end
+	sort.SliceStable(routes, func(i, j int) bool {
+		unhealthyI := routes[i].FailureCount >= 3
+		unhealthyJ := routes[j].FailureCount >= 3
+
+		if unhealthyI != unhealthyJ {
+			// If one is healthy and the other is not, healthy comes first
+			return !unhealthyI
+		}
+		// If both are same health status, maintain original order (stable sort)
+		return false
+	})
+
 	// 2. Sort/Group Routes based on Preference
 	switch preference {
 	case "lowest_cost":
 		// Sort by Cost (Input + Output) Ascending
-		sort.Slice(routes, func(i, j int) bool {
+		sort.SliceStable(routes, func(i, j int) bool {
+			// Maintain health priority
+			unhealthyI := routes[i].FailureCount >= 3
+			unhealthyJ := routes[j].FailureCount >= 3
+			if unhealthyI != unhealthyJ {
+				return !unhealthyI
+			}
+
 			costI := routes[i].CostInput + routes[i].CostOutput
 			costJ := routes[j].CostInput + routes[j].CostOutput
 
@@ -76,7 +97,14 @@ func (r *Router) Route(modelName string, preference string) ([]*RouteResult, err
 	case "lowest_latency":
 		// Sort by Latency Ascending (Lower is better)
 		// Latency is updated by background health check
-		sort.Slice(routes, func(i, j int) bool {
+		sort.SliceStable(routes, func(i, j int) bool {
+			// Maintain health priority
+			unhealthyI := routes[i].FailureCount >= 3
+			unhealthyJ := routes[j].FailureCount >= 3
+			if unhealthyI != unhealthyJ {
+				return !unhealthyI
+			}
+
 			// If Latency is 0 (never checked), treat as high latency (push to bottom)
 			latI := routes[i].Latency
 			latJ := routes[j].Latency
@@ -96,7 +124,24 @@ func (r *Router) Route(modelName string, preference string) ([]*RouteResult, err
 	default: // "priority" or "load_balance" (default behavior)
 		// Group by Priority
 		// We want to randomize selection among the highest priority group
-		routes = r.prioritizedLoadBalance(routes)
+		// But we must respect the health status first!
+		
+		// Split routes into healthy and unhealthy
+		var healthyRoutes, unhealthyRoutes []models.ModelRoute
+		for _, r := range routes {
+			if r.FailureCount >= 3 {
+				unhealthyRoutes = append(unhealthyRoutes, r)
+			} else {
+				healthyRoutes = append(healthyRoutes, r)
+			}
+		}
+
+		// Load balance each group independently
+		healthySorted := r.prioritizedLoadBalance(healthyRoutes)
+		unhealthySorted := r.prioritizedLoadBalance(unhealthyRoutes)
+
+		// Combine: Healthy first, then Unhealthy
+		routes = append(healthySorted, unhealthySorted...)
 	}
 
 	// 3. Build Result List (Candidates for Fallback)

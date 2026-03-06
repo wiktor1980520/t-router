@@ -47,7 +47,12 @@ func main() {
 
 	// CORS Middleware
 	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := c.Request.Header.Get("Origin")
+		if origin != "" {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+		} else {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		}
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
@@ -128,6 +133,7 @@ func main() {
 			// Provider & Model Management (Write Access)
 			admin.POST("/providers", api.CreateProviderHandler)
 			admin.DELETE("/providers/:id", api.DeleteProviderHandler)
+			admin.PUT("/providers/:id", api.UpdateProviderHandler)
 			
 			admin.POST("/routes", api.CreateModelRouteHandler)
 			admin.DELETE("/routes/:id", api.DeleteModelRouteHandler)
@@ -147,6 +153,7 @@ func main() {
 	}
 
 	log.Printf("Starting TRouter Gateway on :%s...", port)
+	log.Printf("Version: %s, BuildTime: %s, Commit: %s", config.Version, config.BuildTime, config.CommitHash)
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}

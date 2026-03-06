@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Coins } from 'lucide-react';
+import { Coins, Zap } from 'lucide-react';
 
 interface Model {
   id: string;
@@ -17,7 +17,7 @@ const Dashboard = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [transactions, setTransactions] = useState([]);
-  const [stats, setStats] = useState({ total_api_calls: 0, daily_usage: [] });
+  const [stats, setStats] = useState({ total_api_calls: 0, total_tokens: 0, daily_usage: [] });
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -85,6 +85,25 @@ const Dashboard = () => {
                   <dt className="text-sm font-medium text-gray-400 truncate">{t('dashboard.total_api_calls')}</dt>
                   <dd>
                     <div className="text-lg font-medium text-white">{stats.total_api_calls.toLocaleString()}</div>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Token Usage Card */}
+        <div className="bg-gray-900 overflow-hidden shadow rounded-lg border border-gray-800">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 bg-purple-500 rounded-md p-3">
+                <Zap className="h-6 w-6 text-white" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-400 truncate">{t('dashboard.total_tokens')}</dt>
+                  <dd>
+                    <div className="text-lg font-medium text-white">{(stats.total_tokens || 0).toLocaleString()}</div>
                   </dd>
                 </dl>
               </div>

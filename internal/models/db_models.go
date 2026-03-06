@@ -115,6 +115,7 @@ type ModelRoute struct {
 	IsActive   bool      `gorm:"default:true" json:"is_active"`
 	Latency    int       `gorm:"default:0" json:"latency"`                         // Latency in ms (updated by background job)
 	LastCheck  time.Time `json:"last_check"`                                       // Timestamp of last health check
+	FailureCount int     `gorm:"default:0" json:"failure_count"`                   // Consecutive failure count
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }

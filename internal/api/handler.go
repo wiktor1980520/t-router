@@ -51,6 +51,22 @@ func ChatCompletionHandler(c *gin.Context) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Account must have a valid API Key to use this service. Please create one in the dashboard."})
 			return
 		}
+
+		// Check User Balance
+		var user models.User
+		if err := config.DB.Select("balance, is_admin").First(&user, "id = ?", userID).Error; err != nil {
+			log.Printf("Error fetching user balance for %s: %v", userID, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error checking balance"})
+			return
+		}
+
+		if !user.IsAdmin && user.Balance <= 0 {
+			c.JSON(http.StatusPaymentRequired, gin.H{
+				"error": "Insufficient balance. Please recharge to continue using the service.",
+				"balance": user.Balance,
+			})
+			return
+		}
 	}
 
 	// Get User Preference

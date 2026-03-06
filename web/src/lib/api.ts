@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+// Force API URL to localhost:8080 for development to avoid env issues
+export const API_URL = 'http://localhost:8080';
 
 const api = axios.create({
   baseURL: `${API_URL}/api`, // Dashboard API

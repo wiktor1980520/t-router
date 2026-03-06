@@ -199,7 +199,8 @@ const RegisterPage = () => {
         </form>
       </div>
       <footer className="mt-8 text-center text-sm text-gray-500">
-        &copy; 2015-{new Date().getFullYear()} {t('common.company_name')}
+        <p>&copy; 2015-{new Date().getFullYear()} {t('common.company_name')}</p>
+        <p className="mt-2 text-xs text-gray-600">{__APP_VERSION__}</p>
       </footer>
     </div>
   );

@@ -24,7 +24,8 @@
     "active": "Active",
     "disabled": "Disabled",
     "balance": "Balance",
-    "admin_role": "Admin"
+    "admin_role": "Admin",
+    "processing": "Processing..."
   },
   "admin": {
     "dashboard_title": "Admin Dashboard",
@@ -122,6 +123,7 @@
     "current_balance": "Current Balance",
     "alert_threshold": "Alert Threshold",
     "total_api_calls": "Total API Calls",
+    "total_tokens": "Total Tokens Consumed",
     "usage_overview": "Usage Overview",
     "available_models": "Available Models & Pricing",
     "recent_transactions": "Recent Transactions",
@@ -146,6 +148,7 @@
     "weight": "Weight",
     "base_url": "Base URL",
     "api_key": "API Key",
+    "api_key_placeholder_edit": "API Key (leave blank to keep unchanged)",
     "provider_name": "Name (e.g. OpenAI)",
     "pricing": "Pricing",
     "add_model": "Add Model",
@@ -235,11 +238,21 @@
     "error_create_model": "Failed to create model",
     "error_delete_model": "Failed to delete model",
     "error_create_provider": "Failed to create provider",
+    "error_update_provider": "Failed to update provider",
+    "edit_provider": "Edit Provider",
     "error_delete_provider": "Failed to delete provider",
     "error_create_route": "Failed to create route",
     "error_delete_route": "Failed to delete route",
     "error_update_status": "Failed to update user status",
-    "user_id": "User ID"
+    "user_id": "User ID",
+    "latency": "Latency (ms)",
+    "last_check": "Last Check",
+    "status": "Status",
+    "system_config": "System Config",
+    "config_name": "Config Name",
+    "config_value": "Config Value",
+    "config_description": "Description",
+    "system_config_desc": "Manage system-wide settings like user gifts, site info, etc."
   },
   "keys": {
     "title": "API Keys",
@@ -272,7 +285,8 @@
     "payment_method": "Payment Method",
     "alipay": "Alipay",
     "wechat_pay": "WeChat Pay",
-    "payment_init_failed": "Failed to initiate payment. Please check console."
+    "payment_init_failed": "Failed to initiate payment. Please check console.",
+    "payment_url_missing": "Failed to get payment URL"
   },
   "settings": {
     "title": "Settings",

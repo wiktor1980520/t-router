@@ -1,7 +1,23 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8'))
+let buildInfo = { build: 0 }
+try {
+  buildInfo = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'build_info.json'), 'utf-8'))
+} catch (e) {
+  // If build_info.json doesn't exist, we can create it or default to 0
+  fs.writeFileSync(path.resolve(__dirname, 'build_info.json'), JSON.stringify({ build: 0 }))
+}
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  define: {
+    __APP_VERSION__: JSON.stringify(`v${pkg.version}.${buildInfo.build}`)
+  }
 })

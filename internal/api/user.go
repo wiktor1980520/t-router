@@ -254,19 +254,28 @@ func GetUserStatsHandler(c *gin.Context) {
 		return
 	}
 
+	// Fetch total token usage
+	type TokenStats struct {
+		TotalPromptTokens     int64 `gorm:"column:total_prompt_tokens"`
+		TotalCompletionTokens int64 `gorm:"column:total_completion_tokens"`
+	}
+	var tokenStats TokenStats
+	
+	if err := config.DB.Model(&models.AuditLog{}).
+		Where("user_id = ?", userID).
+		Select("COALESCE(SUM(prompt_tokens), 0) as total_prompt_tokens, COALESCE(SUM(completion_tokens), 0) as total_completion_tokens").
+		Scan(&tokenStats).Error; err != nil {
+		log.Printf("Failed to sum tokens: %v", err)
+	}
+
 	// Get daily usage for the last 10 days
 	days := 10
 	now := time.Now()
-	// Normalize start time to beginning of the day 10 days ago (actually 9 days ago + today)
-	// If we want exactly 10 points ending today.
-	// Start date = Today - 9 days.
 	startTime := now.AddDate(0, 0, -(days - 1))
-	// Strip time part for accurate comparison if needed, but DB query with >= time is fine.
-	// We'll normalize in the loop.
 	
 	var logs []models.AuditLog
-	// Optimize: only fetch CreatedAt
-	if err := config.DB.Select("created_at").
+	// Optimize: fetch CreatedAt and tokens
+	if err := config.DB.Select("created_at, prompt_tokens, completion_tokens").
 		Where("user_id = ? AND created_at >= ?", userID, startTime.Format("2006-01-02 00:00:00")).
 		Find(&logs).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch usage stats"})
@@ -275,15 +284,19 @@ func GetUserStatsHandler(c *gin.Context) {
 
 	// Aggregate in memory
 	usageMap := make(map[string]int)
+	tokenMap := make(map[string]int)
+
 	for _, log := range logs {
 		// Use local time for date bucketing
 		dateStr := log.CreatedAt.Local().Format("2006-01-02")
 		usageMap[dateStr]++
+		tokenMap[dateStr] += (log.PromptTokens + log.CompletionTokens)
 	}
 
 	type DailyUsage struct {
-		Date  string `json:"date"`
-		Usage int    `json:"usage"`
+		Date   string `json:"date"`
+		Usage  int    `json:"usage"`
+		Tokens int    `json:"tokens"`
 	}
 	var dailyUsage []DailyUsage
 
@@ -293,14 +306,18 @@ func GetUserStatsHandler(c *gin.Context) {
 		dateStr := d.Format("2006-01-02")
 		
 		dailyUsage = append(dailyUsage, DailyUsage{
-			Date:  dateStr,
-			Usage: usageMap[dateStr],
+			Date:   dateStr,
+			Usage:  usageMap[dateStr],
+			Tokens: tokenMap[dateStr],
 		})
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"total_api_calls": totalCalls,
-		"daily_usage":     dailyUsage,
+		"total_api_calls":         totalCalls,
+		"total_prompt_tokens":     tokenStats.TotalPromptTokens,
+		"total_completion_tokens": tokenStats.TotalCompletionTokens,
+		"total_tokens":            tokenStats.TotalPromptTokens + tokenStats.TotalCompletionTokens,
+		"daily_usage":             dailyUsage,
 	})
 }
 

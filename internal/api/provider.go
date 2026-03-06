@@ -111,11 +111,74 @@ func CreateProviderHandler(c *gin.Context) {
 
 func DeleteProviderHandler(c *gin.Context) {
 	id := c.Param("id")
-	if err := config.DB.Delete(&models.Provider{}, id).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete provider"})
+	
+	// Start a transaction
+	tx := config.DB.Begin()
+
+	// 1. Delete associated ModelRoutes first
+	if err := tx.Where("provider_id = ?", id).Delete(&models.ModelRoute{}).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete associated routes"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Provider deleted"})
+
+	// 2. Delete the Provider
+	if err := tx.Delete(&models.Provider{}, id).Error; err != nil {
+		tx.Rollback()
+		// Check for foreign key violation (e.g. AuditLogs)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete provider (might be in use by logs)"})
+		return
+	}
+
+	tx.Commit()
+	c.JSON(http.StatusOK, gin.H{"message": "Provider and associated routes deleted"})
+}
+
+type UpdateProviderRequest struct {
+	Name    string `json:"name"`
+	Type    string `json:"type"`
+	BaseURL string `json:"base_url"`
+	ApiKey  string `json:"api_key"`
+	Weight  int    `json:"weight"`
+}
+
+func UpdateProviderHandler(c *gin.Context) {
+	id := c.Param("id")
+	var req UpdateProviderRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var provider models.Provider
+	if err := config.DB.First(&provider, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Provider not found"})
+		return
+	}
+
+	// Update fields if provided
+	if req.Name != "" {
+		provider.Name = req.Name
+	}
+	if req.Type != "" {
+		provider.Type = req.Type
+	}
+	if req.BaseURL != "" {
+		provider.BaseURL = req.BaseURL
+	}
+	if req.ApiKey != "" {
+		provider.ApiKey = req.ApiKey
+	}
+	if req.Weight > 0 {
+		provider.Weight = req.Weight
+	}
+
+	if err := config.DB.Save(&provider).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update provider"})
+		return
+	}
+
+	c.JSON(http.StatusOK, provider)
 }
 
 

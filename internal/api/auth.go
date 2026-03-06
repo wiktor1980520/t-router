@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -28,8 +29,11 @@ func init() {
 // VerifyTurnstile checks the token with Cloudflare
 func VerifyTurnstile(token string, ip string) bool {
 	if turnstileSecretKey == "" {
+		log.Println("Turnstile: Skipping verification (no secret key)")
 		return true // Skip verification if key is not set (dev mode)
 	}
+	
+	log.Printf("Turnstile: Verifying token for IP %s", ip)
 	
 	// Use Cloudflare's verification API
 	// https://developers.cloudflare.com/turnstile/get-started/server-side-validation/
@@ -174,12 +178,14 @@ func LoginHandler(c *gin.Context) {
 
 	// Verify Turnstile
 	if !VerifyTurnstile(req.TurnstileToken, c.ClientIP()) {
+		log.Printf("Login failed: Turnstile verification failed for IP %s", c.ClientIP())
 		c.JSON(http.StatusForbidden, gin.H{"error": "Turnstile verification failed"})
 		return
 	}
 
 	var user models.User
 	if err := config.DB.Where("email = ?", req.Email).First(&user).Error; err != nil {
+		log.Printf("Login failed: User not found or DB error for email %s: %v", req.Email, err)
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		} else {
@@ -190,6 +196,7 @@ func LoginHandler(c *gin.Context) {
 
 	// Compare password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		log.Printf("Login failed: Password mismatch for user %s", req.Email)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}

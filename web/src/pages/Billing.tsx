@@ -11,6 +11,7 @@ const Billing = () => {
   const [loading, setLoading] = useState(true);
   const [rechargeAmount, setRechargeAmount] = useState<number | ''>('');
   const [showRechargeModal, setShowRechargeModal] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   const PRESET_AMOUNTS = [50, 100, 200, 500, 800, 1000, 1500, 2000, 3000, 5000];
 
@@ -32,36 +33,37 @@ const Billing = () => {
   const handlePayment = async (method: string) => {
     if (!rechargeAmount || rechargeAmount <= 0) return;
     try {
+      setPaymentLoading(true);
       const res = await api.post('/payment/create', { 
         amount: Number(rechargeAmount),
         method: method
       });
       
       if (res.data.payment_url) {
-        window.location.href = res.data.payment_url;
+        // Create a temporary link to open in new tab if needed, 
+        // but for payment gateways usually top-level redirect is best.
+        // However, some users prefer new tab to keep the app open.
+        // Let's stick to current window but ensure it's a valid URL.
+        try {
+            const url = new URL(res.data.payment_url);
+            window.location.href = url.toString();
+        } catch (e) {
+            console.error("Invalid payment URL", res.data.payment_url);
+            alert(t('billing.invalid_payment_url'));
+        }
+      } else {
+        alert(t('billing.payment_url_missing'));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Payment creation failed", err);
-      alert(t('billing.payment_init_failed'));
+      const msg = err.response?.data?.error || t('billing.payment_init_failed');
+      alert(msg);
+    } finally {
+      // If we redirected, this might not run, which is fine.
+      // If we didn't redirect (error), we need to stop loading.
+      setPaymentLoading(false);
     }
   };
-
-  // Deprecated manual recharge
-  /*
-  const handleRecharge = async () => {
-    // Deprecated manual recharge
-    if (!rechargeAmount || rechargeAmount <= 0) return;
-    try {
-      await api.post('/user/recharge', { amount: Number(rechargeAmount) });
-      refreshUser();
-      fetchTransactions();
-      setShowRechargeModal(false);
-      setRechargeAmount('');
-    } catch (err) {
-      console.error(err);
-    }
-  };
-  */
 
   return (
     <div className="space-y-6">
@@ -164,15 +166,17 @@ const Billing = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => handlePayment('alipay')}
-                    className="flex items-center justify-center px-4 py-3 border border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-200 bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    disabled={paymentLoading}
+                    className="flex items-center justify-center px-4 py-3 border border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-200 bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {t('billing.alipay')}
+                    {paymentLoading ? t('common.processing') : t('billing.alipay')}
                   </button>
                   <button
                     onClick={() => handlePayment('wxpay')}
-                    className="flex items-center justify-center px-4 py-3 border border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-200 bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    disabled={paymentLoading}
+                    className="flex items-center justify-center px-4 py-3 border border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-200 bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {t('billing.wechat_pay')}
+                    {paymentLoading ? t('common.processing') : t('billing.wechat_pay')}
                   </button>
                 </div>
               </div>

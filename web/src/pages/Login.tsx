@@ -36,8 +36,18 @@ const LoginPage = () => {
       login(response.data.token, response.data.user);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.error || t('auth.login_failed'));
-      // Reset Turnstile on error if needed, but the component might handle it
+      console.error('Login error:', err);
+       let msg = t('auth.login_failed');
+       if (err.response?.data?.error) {
+         msg = `${msg}: ${err.response.data.error}`;
+       } else if (err.message) {
+         msg = `${msg}: ${err.message}`;
+       }
+       if (err.config?.url) {
+         msg += ` (${err.config.baseURL || ''}${err.config.url})`;
+       }
+       setError(msg);
+       // Reset Turnstile on error if needed, but the component might handle it
     } finally {
       setLoading(false);
     }
@@ -111,7 +121,8 @@ const LoginPage = () => {
         </form>
       </div>
       <footer className="mt-8 text-center text-sm text-gray-500">
-        &copy; 2015-{new Date().getFullYear()} {t('common.company_name')}
+        <p>&copy; 2015-{new Date().getFullYear()} {t('common.company_name')}</p>
+        <p className="mt-2 text-xs text-gray-600">{__APP_VERSION__}</p>
       </footer>
     </div>
   );

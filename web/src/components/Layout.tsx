@@ -106,6 +106,11 @@ const Layout = () => {
             <LogOut className="mr-3 h-5 w-5" />
             {t('nav.sign_out')}
           </button>
+          
+          <div className="mt-4 px-2 flex justify-between items-center text-xs text-gray-600 border-t border-gray-800 pt-4">
+            <span>Version</span>
+            <span className="font-mono">{__APP_VERSION__}</span>
+          </div>
         </div>
       </div>
 

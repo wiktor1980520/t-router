@@ -24,7 +24,8 @@
     "active": "启用",
     "disabled": "禁用",
     "balance": "余额",
-    "admin_role": "管理员"
+    "admin_role": "管理员",
+    "processing": "处理中..."
   },
   "admin": {
     "dashboard_title": "管理控制台",
@@ -122,6 +123,7 @@
     "current_balance": "当前余额",
     "alert_threshold": "预警阈值",
     "total_api_calls": "总调用次数",
+    "total_tokens": "Token 消耗总数",
     "usage_overview": "用量概览",
     "available_models": "可用模型与定价",
     "recent_transactions": "最近交易",
@@ -146,6 +148,7 @@
     "weight": "权重",
     "base_url": "API 地址 (Base URL)",
     "api_key": "API 密钥",
+    "api_key_placeholder_edit": "API 密钥 (留空则不修改)",
     "provider_name": "名称 (例如: OpenAI)",
     "pricing": "模型定价",
     "add_model": "添加模型",
@@ -235,11 +238,21 @@
     "error_create_model": "创建模型失败",
     "error_delete_model": "删除模型失败",
     "error_create_provider": "创建供应商失败",
+    "error_update_provider": "更新供应商失败",
+    "edit_provider": "编辑供应商",
     "error_delete_provider": "删除供应商失败",
     "error_create_route": "创建路由失败",
     "error_delete_route": "删除路由失败",
     "error_update_status": "更新用户状态失败",
-    "user_id": "用户 ID"
+    "user_id": "用户 ID",
+    "latency": "延迟 (ms)",
+    "last_check": "上次检查",
+    "status": "状态",
+    "system_config": "系统配置",
+    "config_name": "配置名称",
+    "config_value": "配置值",
+    "config_description": "描述",
+    "system_config_desc": "管理系统全局设置"
   },
   "keys": {
     "title": "API 密钥管理",
@@ -272,7 +285,8 @@
     "payment_method": "支付方式",
     "alipay": "支付宝",
     "wechat_pay": "微信支付",
-    "payment_init_failed": "发起支付失败，请检查控制台。"
+    "payment_init_failed": "发起支付失败，请检查控制台。",
+    "payment_url_missing": "获取支付链接失败"
   },
   "settings": {
     "title": "系统设置",
