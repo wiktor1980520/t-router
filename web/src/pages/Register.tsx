@@ -67,7 +67,7 @@ const RegisterPage = () => {
       return;
     }
 
-    if (!turnstileToken) {
+    if (import.meta.env.VITE_TURNSTILE_SITE_KEY && !turnstileToken) {
       setError(t('auth.security_check'));
       setLoading(false);
       return;
@@ -178,14 +178,16 @@ const RegisterPage = () => {
             </div>
           </div>
 
-          <div className="flex justify-center">
-            <Turnstile 
-              siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-              onSuccess={setTurnstileToken}
-              onError={() => setError(t('auth.security_check_failed'))}
-              options={{ theme: 'dark' }}
-            />
-          </div>
+          {import.meta.env.VITE_TURNSTILE_SITE_KEY && (
+            <div className="flex justify-center">
+              <Turnstile 
+                siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                onSuccess={setTurnstileToken}
+                onError={() => setError(t('auth.security_check_failed'))}
+                options={{ theme: 'dark' }}
+              />
+            </div>
+          )}
 
           <div>
             <button
