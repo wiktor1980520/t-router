@@ -2,8 +2,14 @@ import axios from 'axios';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
+const joinBase = (base: string, suffix: '/api' | '/v1') => {
+  const trimmed = base.replace(/\/+$/, '');
+  if (trimmed.endsWith(suffix)) return trimmed;
+  return `${trimmed}${suffix}`;
+};
+
 const api = axios.create({
-  baseURL: API_BASE ? `${API_BASE}/api` : '/api',
+  baseURL: API_BASE ? joinBase(API_BASE, '/api') : '/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -21,7 +27,7 @@ api.interceptors.request.use(
 );
 
 export const chatApi = axios.create({
-  baseURL: API_BASE ? `${API_BASE}/v1` : '/v1',
+  baseURL: API_BASE ? joinBase(API_BASE, '/v1') : '/v1',
   headers: {
     'Content-Type': 'application/json',
   },
