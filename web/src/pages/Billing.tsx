@@ -48,7 +48,7 @@ const Billing = () => {
             const url = new URL(res.data.payment_url);
             window.location.href = url.toString();
         } catch (e) {
-            console.error("Invalid payment URL", res.data.payment_url);
+            console.error("Invalid payment URL", res.data.payment_url, e);
             alert(t('billing.invalid_payment_url'));
         }
       } else {

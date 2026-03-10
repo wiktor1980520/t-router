@@ -1,16 +1,14 @@
 import axios from 'axios';
 
-// Force API URL to localhost:8080 for development to avoid env issues
-export const API_URL = 'http://localhost:8080';
+const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 const api = axios.create({
-  baseURL: `${API_URL}/api`, // Dashboard API
+  baseURL: API_BASE ? `${API_BASE}/api` : '/api',
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Add a request interceptor to include the token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -23,7 +21,7 @@ api.interceptors.request.use(
 );
 
 export const chatApi = axios.create({
-  baseURL: `${API_URL}/v1`, // Chat API
+  baseURL: API_BASE ? `${API_BASE}/v1` : '/v1',
   headers: {
     'Content-Type': 'application/json',
   },
