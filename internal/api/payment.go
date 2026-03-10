@@ -60,13 +60,52 @@ func SignYiPay(params map[string]string, key string) string {
 	return hex.EncodeToString(hash[:])
 }
 
+// BestPay (翼支付) configuration and signing (simplified for initial integration)
+type BestPayConfig struct {
+	URL        string
+	MerchantID string
+	AppID      string
+	Key        string
+}
+
+func getBestPayConfig() BestPayConfig {
+	return BestPayConfig{
+		URL:        os.Getenv("BESTPAY_API_URL"),
+		MerchantID: os.Getenv("BESTPAY_MERCHANT_ID"),
+		AppID:      os.Getenv("BESTPAY_APP_ID"),
+		Key:        os.Getenv("BESTPAY_KEY"),
+	}
+}
+
+func SignBestPay(params map[string]string, key string) string {
+	keys := make([]string, 0, len(params))
+	for k := range params {
+		if k != "sign" && k != "sign_type" && params[k] != "" {
+			keys = append(keys, k)
+		}
+	}
+	sort.Strings(keys)
+	var builder strings.Builder
+	for i, k := range keys {
+		if i > 0 {
+			builder.WriteString("&")
+		}
+		builder.WriteString(k)
+		builder.WriteString("=")
+		builder.WriteString(params[k])
+	}
+	builder.WriteString(key)
+	hash := md5.Sum([]byte(builder.String()))
+	return hex.EncodeToString(hash[:])
+}
+
 // CreatePaymentHandler initiates a payment request
 func CreatePaymentHandler(c *gin.Context) {
 	userID := c.GetString("user_id")
 	
 	var req struct {
 		Amount float64 `json:"amount" binding:"required,gt=0"`
-		Method string  `json:"method" binding:"required"` // alipay, wxpay, usdt
+		Method string  `json:"method"` // ignored for BestPay unified cashier
 	}
 	
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -74,10 +113,9 @@ func CreatePaymentHandler(c *gin.Context) {
 		return
 	}
 
-	cfg := getYiPayConfig()
-	if cfg.PID == "" || cfg.Key == "" {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Payment gateway not configured"})
-		return
+	channel := os.Getenv("PAYMENT_CHANNEL")
+	if channel == "" {
+		channel = "bestpay"
 	}
 
 	// 1. Create a pending transaction
@@ -87,8 +125,8 @@ func CreatePaymentHandler(c *gin.Context) {
 		Type:          "recharge",
 		Amount:        req.Amount,
 		Status:        "pending",
-		PaymentMethod: req.Method,
-		Description:   fmt.Sprintf("Recharge $%.2f via %s", req.Amount, req.Method),
+		PaymentMethod: channel,
+		Description:   fmt.Sprintf("Recharge ¥%.2f via %s", req.Amount, channel),
 		ReferenceID:   orderID,
 	}
 
@@ -97,11 +135,7 @@ func CreatePaymentHandler(c *gin.Context) {
 		return
 	}
 
-	// 2. Prepare YiPay parameters
-	// Assuming the aggregator accepts "money" in CNY or USD depending on config.
-	// Here we assume the gateway handles currency conversion or 1:1 if configured.
-	// Common YiPay params: pid, type, out_trade_no, notify_url, return_url, name, money, sitename
-	
+	// 2. Prepare parameters for selected channel
 	// Construct absolute URLs for callbacks
 	// In production, these should be from config
 	scheme := "http"
@@ -118,38 +152,62 @@ func CreatePaymentHandler(c *gin.Context) {
 		returnURL = "http://localhost:5173/dashboard/billing"
 	}
 
-	params := map[string]string{
-		"pid":          cfg.PID,
-		"type":         req.Method,
-		"out_trade_no": orderID,
-		"notify_url":   notifyURL,
-		"return_url":   returnURL,
-		"name":         "TRouter Balance Recharge",
-		"money":        fmt.Sprintf("%.2f", req.Amount),
-		"sitename":     "TRouter",
+	var paymentURL string
+	if channel == "bestpay" {
+		cfg := getBestPayConfig()
+		if cfg.MerchantID == "" || cfg.AppID == "" || cfg.Key == "" || cfg.URL == "" {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "BestPay not configured"})
+			return
+		}
+		params := map[string]string{
+			"merchant_id":  cfg.MerchantID,
+			"app_id":       cfg.AppID,
+			"out_trade_no": orderID,
+			"notify_url":   notifyURL,
+			"return_url":   returnURL,
+			"subject":      "TRouter Balance Recharge",
+			"total_amount": fmt.Sprintf("%.2f", req.Amount),
+		}
+		params["sign"] = SignBestPay(params, cfg.Key)
+		params["sign_type"] = "MD5"
+		values := url.Values{}
+		for k, v := range params {
+			values.Add(k, v)
+		}
+		paymentURL = fmt.Sprintf("%s?%s", cfg.URL, values.Encode())
+	} else {
+		cfg := getYiPayConfig()
+		if cfg.PID == "" || cfg.Key == "" || cfg.URL == "" {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "YiPay not configured"})
+			return
+		}
+		params := map[string]string{
+			"pid":          cfg.PID,
+			"type":         "alipay",
+			"out_trade_no": orderID,
+			"notify_url":   notifyURL,
+			"return_url":   returnURL,
+			"name":         "TRouter Balance Recharge",
+			"money":        fmt.Sprintf("%.2f", req.Amount),
+			"sitename":     "TRouter",
+		}
+		params["sign"] = SignYiPay(params, cfg.Key)
+		params["sign_type"] = "MD5"
+		values := url.Values{}
+		for k, v := range params {
+			values.Add(k, v)
+		}
+		paymentURL = fmt.Sprintf("%s?%s", cfg.URL, values.Encode())
 	}
-
-	params["sign"] = SignYiPay(params, cfg.Key)
-	params["sign_type"] = "MD5"
 
 	// 3. Return the payment URL or Form
-	// YiPay usually works by submitting a form to the gateway URL
-	// We can construct the URL with query params for a GET redirect
-	
-	values := url.Values{}
-	for k, v := range params {
-		values.Add(k, v)
-	}
-	
-	paymentURL := fmt.Sprintf("%s?%s", cfg.URL, values.Encode())
-
 	c.JSON(http.StatusOK, gin.H{
 		"payment_url": paymentURL,
 		"order_id":    orderID,
 	})
 }
 
-// PaymentNotifyHandler handles the asynchronous callback from YiPay
+// PaymentNotifyHandler handles the asynchronous callback from payment gateway
 func PaymentNotifyHandler(c *gin.Context) {
 	// Parse form data
 	if err := c.Request.ParseForm(); err != nil {
@@ -164,11 +222,21 @@ func PaymentNotifyHandler(c *gin.Context) {
 		}
 	}
 
-	cfg := getYiPayConfig()
+	channel := os.Getenv("PAYMENT_CHANNEL")
+	if channel == "" {
+		channel = "bestpay"
+	}
 	
 	// 1. Verify Signature
 	sign := params["sign"]
-	calculatedSign := SignYiPay(params, cfg.Key)
+	var calculatedSign string
+	if channel == "bestpay" {
+		cfg := getBestPayConfig()
+		calculatedSign = SignBestPay(params, cfg.Key)
+	} else {
+		cfg := getYiPayConfig()
+		calculatedSign = SignYiPay(params, cfg.Key)
+	}
 	
 	if sign != calculatedSign {
 		log.Printf("[Payment] Signature verification failed. Received: %s, Calculated: %s", sign, calculatedSign)
@@ -178,7 +246,10 @@ func PaymentNotifyHandler(c *gin.Context) {
 
 	// 2. Check Status
 	status := params["trade_status"]
-	if status != "TRADE_SUCCESS" {
+	if status == "" {
+		status = params["status"]
+	}
+	if status != "TRADE_SUCCESS" && status != "SUCCESS" {
 		log.Printf("[Payment] Trade failed or pending: %s", status)
 		c.String(http.StatusOK, "success") // Acknowledge receipt even if not success
 		return
@@ -187,6 +258,9 @@ func PaymentNotifyHandler(c *gin.Context) {
 	// 3. Process Order
 	outTradeNo := params["out_trade_no"]
 	moneyStr := params["money"]
+	if moneyStr == "" {
+		moneyStr = params["total_amount"]
+	}
 	money, _ := strconv.ParseFloat(moneyStr, 64)
 
 	tx := config.DB.Begin()

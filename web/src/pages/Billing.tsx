@@ -163,20 +163,13 @@ const Billing = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-1">{t('billing.payment_method')}</label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3">
                   <button
-                    onClick={() => handlePayment('alipay')}
+                    onClick={() => handlePayment('bestpay')}
                     disabled={paymentLoading}
                     className="flex items-center justify-center px-4 py-3 border border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-200 bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {paymentLoading ? t('common.processing') : t('billing.alipay')}
-                  </button>
-                  <button
-                    onClick={() => handlePayment('wxpay')}
-                    disabled={paymentLoading}
-                    className="flex items-center justify-center px-4 py-3 border border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-200 bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {paymentLoading ? t('common.processing') : t('billing.wechat_pay')}
                   </button>
                 </div>
               </div>
