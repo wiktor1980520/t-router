@@ -89,7 +89,7 @@ export default function AdminUserDetail() {
     try {
       setSavingModels(true);
       await api.put(`/admin/users/${id}`, {
-        allowed_models: user.allowed_models
+        allowed_models: user.allowed_models ?? []
       });
       alert(t('common.saved_successfully'));
     } catch (error) {

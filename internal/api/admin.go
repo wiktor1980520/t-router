@@ -158,13 +158,20 @@ func AdminUpdateUserHandler(c *gin.Context) {
 		return
 	}
 
-	// Update allowed models
-	user.AllowedModels = models.ModelList(req.AllowedModels)
-
-	if err := config.DB.Save(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+	// Update only the allowed_models field to avoid unintended overwrites
+	if err := config.DB.Model(&models.User{}).
+		Where("id = ?", id).
+		Update("allowed_models", models.ModelList(req.AllowedModels)).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to update user allowed_models",
+		})
 		return
 	}
 
+	// Return updated user
+	if err := config.DB.Preload("ApiKeys").First(&user, "id = ?", id).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch updated user"})
+		return
+	}
 	c.JSON(http.StatusOK, user)
 }
