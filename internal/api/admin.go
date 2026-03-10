@@ -11,6 +11,17 @@ import (
 	"gorm.io/gorm"
 )
 
+func AdminDbSchemaHandler(c *gin.Context) {
+	dialect := config.DB.Dialector.Name()
+	usersAllowed := config.DB.Migrator().HasColumn(&models.User{}, "allowed_models")
+	apiKeysAllowed := config.DB.Migrator().HasColumn(&models.ApiKey{}, "allowed_models")
+	c.JSON(http.StatusOK, gin.H{
+		"database": gin.H{"dialect": dialect},
+		"users":    gin.H{"allowed_models_exists": usersAllowed},
+		"api_keys": gin.H{"allowed_models_exists": apiKeysAllowed},
+	})
+}
+
 // AdminListUsersHandler lists all users with pagination
 func AdminListUsersHandler(c *gin.Context) {
 	var users []models.User
@@ -163,7 +174,8 @@ func AdminUpdateUserHandler(c *gin.Context) {
 		Where("id = ?", id).
 		Update("allowed_models", models.ModelList(req.AllowedModels)).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to update user allowed_models",
+			"error":  "Failed to update user allowed_models",
+			"detail": err.Error(),
 		})
 		return
 	}

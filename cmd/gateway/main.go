@@ -147,6 +147,7 @@ func main() {
 			// System Config Management
 			admin.GET("/config", adminApi.GetSystemConfigHandler)
 			admin.PUT("/config", adminApi.UpdateSystemConfigHandler)
+			admin.GET("/db/schema", api.AdminDbSchemaHandler)
 		}
 	}
 
