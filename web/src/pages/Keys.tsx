@@ -141,7 +141,7 @@ const ApiKeys = () => {
                   </button>
                   {visibleKeys.has(key.id) && key.key && (
                     <button 
-                      onClick={() => navigator.clipboard.writeText(key.key)} 
+                      onClick={() => navigator.clipboard.writeText(key.key!)} 
                       className="text-gray-400 hover:text-white transition-colors"
                       title={t('keys.copy_key')}
                     >
@@ -255,7 +255,7 @@ const ApiKeys = () => {
                 <div className="flex items-center bg-gray-900 p-3 rounded border border-gray-700">
                   <code className="text-green-400 flex-1 break-all">{createdKey}</code>
                   <button
-                    onClick={() => navigator.clipboard.writeText(createdKey)}
+                    onClick={() => navigator.clipboard.writeText(createdKey!)}
                     className="ml-2 text-gray-400 hover:text-white"
                   >
                     <Copy className="h-5 w-5" />
