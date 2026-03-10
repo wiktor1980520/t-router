@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Send, Loader2, Bot, User as UserIcon, Trash2 } from 'lucide-react';
-import api, { API_URL } from '../lib/api';
+import api from '../lib/api';
 import ReactMarkdown from 'react-markdown';
 
 interface Model {
@@ -69,7 +69,9 @@ export default function Playground() {
       const assistantMessage: Message = { role: 'assistant', content: '' };
       setMessages([...newMessages, assistantMessage]);
 
-      const response = await fetch(`${API_URL}/api/chat/completions`, {
+      const API_BASE = import.meta.env.VITE_API_BASE_URL;
+      const endpoint = API_BASE ? `${API_BASE}/api/chat/completions` : '/api/chat/completions';
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
