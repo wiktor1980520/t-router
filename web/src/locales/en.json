@@ -284,6 +284,7 @@
     "custom_amount": "Custom Amount",
     "payment_method": "Payment Method",
     "alipay": "Alipay",
+    "bestpay": "BestPay",
     "wechat_pay": "WeChat Pay",
     "payment_init_failed": "Failed to initiate payment. Please check console.",
     "payment_url_missing": "Failed to get payment URL"

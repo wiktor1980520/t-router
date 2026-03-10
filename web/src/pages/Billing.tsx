@@ -169,7 +169,7 @@ const Billing = () => {
                     disabled={paymentLoading}
                     className="flex items-center justify-center px-4 py-3 border border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-200 bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {paymentLoading ? t('common.processing') : t('billing.alipay')}
+                    {paymentLoading ? t('common.processing') : t('billing.bestpay')}
                   </button>
                 </div>
               </div>

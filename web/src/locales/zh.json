@@ -284,6 +284,7 @@
     "custom_amount": "自定义金额",
     "payment_method": "支付方式",
     "alipay": "支付宝",
+    "bestpay": "翼支付",
     "wechat_pay": "微信支付",
     "payment_init_failed": "发起支付失败，请检查控制台。",
     "payment_url_missing": "获取支付链接失败"
