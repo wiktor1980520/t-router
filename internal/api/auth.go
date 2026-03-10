@@ -52,13 +52,17 @@ func VerifyTurnstile(token string, ip string) bool {
 	defer resp.Body.Close()
 	
 	var result struct {
-		Success bool `json:"success"`
+		Success    bool     `json:"success"`
+		ErrorCodes []string `json:"error-codes"`
 	}
 	
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return false
 	}
 	
+	if !result.Success {
+		log.Printf("Turnstile verification failed: errors=%v ip=%s", result.ErrorCodes, ip)
+	}
 	return result.Success
 }
 
