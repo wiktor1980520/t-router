@@ -79,6 +79,41 @@ func ChatCompletionHandler(c *gin.Context) {
 		}
 	}
 
+	// Enforce API Key model allowlist (if configured)
+	if apiKeyVal, exists := c.Get(ContextKeyApiKey); exists {
+		if apiKey, ok := apiKeyVal.(*models.ApiKey); ok && len(apiKey.AllowedModels) > 0 {
+			allowed := false
+			for _, m := range apiKey.AllowedModels {
+				if m == req.Model {
+					allowed = true
+					break
+				}
+			}
+			if !allowed {
+				c.JSON(http.StatusForbidden, gin.H{"error": fmt.Sprintf("Model '%s' is not allowed for this API key", req.Model)})
+				return
+			}
+		}
+	}
+
+	// Enforce User model allowlist
+	if userID != "" {
+		var user models.User
+		if err := config.DB.Select("allowed_models").First(&user, "id = ?", userID).Error; err == nil && len(user.AllowedModels) > 0 {
+			allowed := false
+			for _, m := range user.AllowedModels {
+				if m == req.Model {
+					allowed = true
+					break
+				}
+			}
+			if !allowed {
+				c.JSON(http.StatusForbidden, gin.H{"error": fmt.Sprintf("Model '%s' is not allowed for your account", req.Model)})
+				return
+			}
+		}
+	}
+
 	// Route Request (Get list of candidates for fallback)
 	log.Printf("Routing request %s for model %s", requestID, req.Model)
 	routeResults, err := router.GetRouter().Route(req.Model, routingPreference)

@@ -9,7 +9,7 @@ const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'package.json'), 
 let buildInfo = { build: 0 }
 try {
   buildInfo = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'build_info.json'), 'utf-8'))
-} catch (e) {
+} catch {
   // If build_info.json doesn't exist, we can create it or default to 0
   fs.writeFileSync(path.resolve(__dirname, 'build_info.json'), JSON.stringify({ build: 0 }))
 }

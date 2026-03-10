@@ -72,7 +72,11 @@
     "total_users": "Total Users",
     "user_detail": "User Details",
     "disable_user": "Disable User",
-    "enable_user": "Enable User"
+    "enable_user": "Enable User",
+    "allowed_models": "Allowed Models",
+    "allowed_models_desc": "Select which models this user is allowed to access. If none selected, all models are allowed.",
+    "all_models_allowed_hint": "No specific models restricted. User can access all available models.",
+    "no_models_selected_warning": "No models selected, defaulting to all allowed."
   },
   "playground": {
     "title": "AI Playground",
@@ -261,6 +265,12 @@
     "modal_title": "Create New API Key",
     "key_label": "Key Label (e.g. My App)",
     "copy_warning": "Please copy your API key now. You won't be able to see it again!",
+    "allowed_models": "Allowed models (optional)",
+    "allowed_models_desc": "If none selected, all available models are allowed",
+    "select_all": "Select all",
+    "clear_selection": "Clear",
+    "no_available_models": "No available models (configure providers and routes first)",
+    "all_models": "All",
     "active": "Active",
     "inactive": "Inactive",
     "hide_key": "Hide Key",

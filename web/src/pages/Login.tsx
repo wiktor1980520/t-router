@@ -5,6 +5,7 @@ import { Turnstile } from '@marsidev/react-turnstile';
 import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { LogIn } from 'lucide-react';
+import type { AxiosError } from 'axios';
 
 const LoginPage = () => {
   const { t, i18n } = useTranslation();
@@ -35,19 +36,19 @@ const LoginPage = () => {
       });
       login(response.data.token, response.data.user);
       navigate('/dashboard');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Login error:', err);
-       let msg = t('auth.login_failed');
-       if (err.response?.data?.error) {
-         msg = `${msg}: ${err.response.data.error}`;
-       } else if (err.message) {
-         msg = `${msg}: ${err.message}`;
-       }
-       if (err.config?.url) {
-         msg += ` (${err.config.baseURL || ''}${err.config.url})`;
-       }
-       setError(msg);
-       // Reset Turnstile on error if needed, but the component might handle it
+      const axiosErr = err as AxiosError<{ error?: string }>;
+      let msg = t('auth.login_failed');
+      if (axiosErr.response?.data?.error) {
+        msg = `${msg}: ${axiosErr.response.data.error}`;
+      } else if (axiosErr.message) {
+        msg = `${msg}: ${axiosErr.message}`;
+      }
+      if (axiosErr.config?.url) {
+        msg += ` (${axiosErr.config.baseURL || ''}${axiosErr.config.url})`;
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }

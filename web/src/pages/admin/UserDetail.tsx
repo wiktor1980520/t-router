@@ -32,7 +32,13 @@ interface UserDetail {
   is_active: boolean;
   is_admin: boolean;
   created_at: string;
-  api_keys?: any[];
+  api_keys?: unknown[];
+  allowed_models?: string[];
+}
+
+interface Model {
+  id: string;
+  name: string;
 }
 
 export default function AdminUserDetail() {
@@ -41,18 +47,24 @@ export default function AdminUserDetail() {
   const [user, setUser] = useState<UserDetail | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Models State
+  const [allModels, setAllModels] = useState<Model[]>([]);
+  const [savingModels, setSavingModels] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       if (!id) return;
       try {
         setLoading(true);
-        const [userRes, txRes] = await Promise.all([
+        const [userRes, txRes, modelsRes] = await Promise.all([
           api.get<UserDetail>(`/admin/users/${id}`),
-          api.get<Transaction[]>(`/admin/transactions?user_id=${id}`)
+          api.get<Transaction[]>(`/admin/transactions?user_id=${id}`),
+          api.get<Model[]>('/models')
         ]);
         setUser(userRes.data);
         setTransactions(txRes.data);
+        setAllModels(modelsRes.data);
       } catch (error) {
         console.error('Failed to fetch user details:', error);
       } finally {
@@ -61,6 +73,32 @@ export default function AdminUserDetail() {
     };
     fetchData();
   }, [id]);
+
+  const handleToggleModel = (modelId: string) => {
+    if (!user) return;
+    const current = user.allowed_models || [];
+    const updated = current.includes(modelId)
+      ? current.filter(id => id !== modelId)
+      : [...current, modelId];
+    
+    setUser({ ...user, allowed_models: updated });
+  };
+
+  const saveAllowedModels = async () => {
+    if (!user || !id) return;
+    try {
+      setSavingModels(true);
+      await api.put(`/admin/users/${id}`, {
+        allowed_models: user.allowed_models
+      });
+      alert(t('common.saved_successfully'));
+    } catch (error) {
+      console.error('Failed to save allowed models:', error);
+      alert(t('common.error_occurred'));
+    } finally {
+      setSavingModels(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -146,6 +184,45 @@ export default function AdminUserDetail() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Allowed Models */}
+      <div className="bg-gray-800 rounded-xl border border-gray-700 p-6">
+        <div className="flex justify-between items-center mb-4">
+            <div>
+                <h3 className="text-lg font-semibold text-white">{t('admin.allowed_models')}</h3>
+                <p className="text-sm text-gray-400">{t('admin.allowed_models_desc')}</p>
+            </div>
+            <button 
+                onClick={saveAllowedModels} 
+                disabled={savingModels}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 flex items-center gap-2 transition-colors"
+            >
+                {savingModels && <Activity className="w-4 h-4 animate-spin" />}
+                {t('common.save')}
+            </button>
+        </div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {allModels.map(model => (
+                <label key={model.id} className={`flex items-center gap-2 p-3 rounded border cursor-pointer transition-colors ${
+                    user?.allowed_models?.includes(model.id) 
+                        ? 'bg-blue-500/10 border-blue-500/50' 
+                        : 'bg-gray-900 border-gray-700 hover:border-gray-500'
+                }`}>
+                    <input 
+                        type="checkbox" 
+                        checked={user?.allowed_models?.includes(model.id) || false}
+                        onChange={() => handleToggleModel(model.id)}
+                        className="w-4 h-4 text-blue-500 rounded border-gray-600 focus:ring-blue-500 bg-gray-700"
+                    />
+                    <span className="text-sm text-white">{model.name}</span>
+                </label>
+            ))}
+        </div>
+        {(!user?.allowed_models || user.allowed_models.length === 0) && (
+            <p className="mt-2 text-sm text-green-400">{t('admin.all_models_allowed_hint')}</p>
+        )}
       </div>
 
       {/* Transactions List */}

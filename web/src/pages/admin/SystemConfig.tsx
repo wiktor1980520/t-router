@@ -9,6 +9,7 @@ import {
   Check
 } from 'lucide-react';
 import api from '../../lib/api';
+import type { AxiosError } from 'axios';
 
 interface SystemConfig {
   id: number;
@@ -77,11 +78,12 @@ export default function SystemConfigPage() {
       
       setMessage({ type: 'success', text: t('admin.config_update_success') });
       setEditingId(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to update config:', error);
+      const axiosErr = error as AxiosError<{ error?: string }>;
       setMessage({ 
         type: 'error', 
-        text: error.response?.data?.error || t('admin.config_update_failed') 
+        text: axiosErr.response?.data?.error || t('admin.config_update_failed') 
       });
     } finally {
       setSaving(false);

@@ -5,6 +5,7 @@ import { Turnstile } from '@marsidev/react-turnstile';
 import api from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { UserPlus } from 'lucide-react';
+import type { AxiosError } from 'axios';
 
 const RegisterPage = () => {
   const { t, i18n } = useTranslation();
@@ -39,8 +40,9 @@ const RegisterPage = () => {
           return prev - 1;
         });
       }, 1000);
-    } catch (err: any) {
-      setError(err.response?.data?.error || t('auth.code_send_failed'));
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError<{ error?: string }>;
+      setError(axiosErr.response?.data?.error || t('auth.code_send_failed'));
     }
   };
 
@@ -83,8 +85,9 @@ const RegisterPage = () => {
       });
       login(response.data.token, response.data.user);
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.error || t('auth.register_failed'));
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError<{ error?: string }>;
+      setError(axiosErr.response?.data?.error || t('auth.register_failed'));
     } finally {
       setLoading(false);
     }

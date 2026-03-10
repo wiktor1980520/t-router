@@ -81,6 +81,7 @@ func CreateApiKeyHandler(c *gin.Context) {
 		KeyPrefix:         rawKey[:7],
 		Label:             req.Label,
 		RoutingPreference: pref,
+		AllowedModels:     models.ModelList(req.AllowedModels),
 		IsActive:          true,
 	}
 
@@ -320,4 +321,3 @@ func GetUserStatsHandler(c *gin.Context) {
 		"daily_usage":             dailyUsage,
 	})
 }
-

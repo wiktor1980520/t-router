@@ -13,11 +13,30 @@ interface Model {
   context_length: number;
 }
 
+interface Transaction {
+  id: string;
+  type: string;
+  amount: number;
+  description: string;
+  created_at: string;
+}
+
+interface DailyUsageItem {
+  date: string;
+  usage: number;
+}
+
+interface UserStats {
+  total_api_calls: number;
+  total_tokens: number;
+  daily_usage: DailyUsageItem[];
+}
+
 const Dashboard = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const [transactions, setTransactions] = useState([]);
-  const [stats, setStats] = useState({ total_api_calls: 0, total_tokens: 0, daily_usage: [] });
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [stats, setStats] = useState<UserStats>({ total_api_calls: 0, total_tokens: 0, daily_usage: [] });
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -25,9 +44,9 @@ const Dashboard = () => {
     const fetchData = async () => {
       try {
         const [txRes, statsRes, modelsRes] = await Promise.all([
-          api.get('/user/transactions'),
-          api.get('/user/stats'),
-          api.get('/models')
+          api.get<Transaction[]>('/user/transactions'),
+          api.get<UserStats>('/user/stats'),
+          api.get<Model[]>('/models/available')
         ]);
         setTransactions(txRes.data.slice(0, 5)); // Get recent 5
         setStats(statsRes.data);
@@ -118,7 +137,7 @@ const Dashboard = () => {
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={stats.daily_usage && stats.daily_usage.length > 0 
-              ? stats.daily_usage.map((item: any) => ({ name: item.date.slice(5), usage: item.usage })) 
+              ? stats.daily_usage.map((item) => ({ name: item.date.slice(5), usage: item.usage })) 
               : []}>
               <XAxis dataKey="name" stroke="#9CA3AF" />
               <YAxis stroke="#9CA3AF" />
@@ -170,7 +189,7 @@ const Dashboard = () => {
           <h3 className="text-lg leading-6 font-medium text-white">{t('dashboard.recent_transactions')}</h3>
         </div>
         <ul className="divide-y divide-gray-800">
-          {transactions.map((tx: any) => (
+          {transactions.map((tx) => (
             <li key={tx.id} className="px-4 py-4 sm:px-6">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-blue-400 truncate">{tx.description}</p>

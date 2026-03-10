@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"time"
 	"trouter/internal/config"
 	"trouter/internal/models"
 
@@ -17,6 +18,149 @@ func ListModelsHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, ms)
+}
+
+func ListAvailableModelsHandler(c *gin.Context) {
+	modelIDs, err := routableModelIDs()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch available models"})
+		return
+	}
+
+	if len(modelIDs) == 0 {
+		c.JSON(http.StatusOK, []models.Model{})
+		return
+	}
+
+	// Filter by User AllowedModels
+	userID := c.GetString("user_id")
+	if userID != "" {
+		var user models.User
+		if err := config.DB.Select("allowed_models").First(&user, "id = ?", userID).Error; err == nil {
+			if len(user.AllowedModels) > 0 {
+				allowedSet := make(map[string]bool)
+				for _, m := range user.AllowedModels {
+					allowedSet[m] = true
+				}
+				var filtered []string
+				for _, mid := range modelIDs {
+					if allowedSet[mid] {
+						filtered = append(filtered, mid)
+					}
+				}
+				modelIDs = filtered
+			}
+		}
+	}
+
+	if len(modelIDs) == 0 {
+		c.JSON(http.StatusOK, []models.Model{})
+		return
+	}
+
+	var ms []models.Model
+	if err := config.DB.Where("id IN ? AND is_active = ?", modelIDs, true).Find(&ms).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch available models"})
+		return
+	}
+	c.JSON(http.StatusOK, ms)
+}
+
+func ListV1ModelsHandler(c *gin.Context) {
+	modelIDs, err := routableModelIDs()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch models"})
+		return
+	}
+
+	// 1. Check ApiKey Restrictions
+	apiKeyAllowedSet := make(map[string]struct{})
+	hasApiKeyRestrictions := false
+	var userID string
+
+	if apiKeyVal, exists := c.Get(ContextKeyApiKey); exists {
+		if apiKey, ok := apiKeyVal.(*models.ApiKey); ok {
+			userID = apiKey.UserID
+			if len(apiKey.AllowedModels) > 0 {
+				hasApiKeyRestrictions = true
+				for _, m := range apiKey.AllowedModels {
+					apiKeyAllowedSet[m] = struct{}{}
+				}
+			}
+		}
+	}
+
+	// 2. Check User Restrictions
+	userAllowedSet := make(map[string]struct{})
+	hasUserRestrictions := false
+	if userID != "" {
+		var user models.User
+		if err := config.DB.Select("allowed_models").First(&user, "id = ?", userID).Error; err == nil && len(user.AllowedModels) > 0 {
+			hasUserRestrictions = true
+			for _, m := range user.AllowedModels {
+				userAllowedSet[m] = struct{}{}
+			}
+		}
+	}
+
+	// 3. Apply Filters
+	filtered := make([]string, 0, len(modelIDs))
+	for _, id := range modelIDs {
+		allowed := true
+
+		// Check User restrictions first (User permission is the baseline)
+		if hasUserRestrictions {
+			if _, ok := userAllowedSet[id]; !ok {
+				allowed = false
+			}
+		}
+
+		// Check ApiKey restrictions (ApiKey can further restrict, but not expand beyond User)
+		if allowed && hasApiKeyRestrictions {
+			if _, ok := apiKeyAllowedSet[id]; !ok {
+				allowed = false
+			}
+		}
+
+		if allowed {
+			filtered = append(filtered, id)
+		}
+	}
+
+	type v1Model struct {
+		ID      string `json:"id"`
+		Object  string `json:"object"`
+		Created int64  `json:"created"`
+		OwnedBy string `json:"owned_by"`
+	}
+
+	data := make([]v1Model, 0, len(filtered))
+	created := time.Now().Unix()
+	for _, id := range filtered {
+		data = append(data, v1Model{
+			ID:      id,
+			Object:  "model",
+			Created: created,
+			OwnedBy: "t-router",
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"object": "list",
+		"data":   data,
+	})
+}
+
+func routableModelIDs() ([]string, error) {
+	var modelIDs []string
+	err := config.DB.
+		Model(&models.ModelRoute{}).
+		Select("DISTINCT model_routes.model_name").
+		Joins("JOIN models ON models.id = model_routes.model_name").
+		Joins("JOIN providers ON providers.id = model_routes.provider_id").
+		Where("model_routes.is_active = ? AND providers.is_active = ? AND models.is_active = ?", true, true, true).
+		Pluck("model_routes.model_name", &modelIDs).Error
+	return modelIDs, err
 }
 
 type CreateModelRequest struct {

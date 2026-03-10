@@ -1,6 +1,9 @@
 package models
 
 import (
+	"database/sql/driver"
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,6 +19,7 @@ type User struct {
 	BalanceAlertThreshold float64 `gorm:"type:decimal(20,8);default:10.00" json:"balance_alert_threshold"` // Default alert at $10
 	IsActive  bool      `gorm:"default:true" json:"is_active"`
 	IsAdmin   bool      `gorm:"default:false" json:"is_admin"`
+	AllowedModels ModelList `gorm:"type:text" json:"allowed_models,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	
@@ -45,7 +49,9 @@ type ApiKey struct {
 	KeyPrefix string    `gorm:"size:10;not null" json:"key_prefix"`
 	Label     string    `gorm:"size:50" json:"label"`
 	RoutingPreference string `gorm:"size:20;default:'lowest_cost'" json:"routing_preference"`
-	ExpiresAt *time.Time `json:"expires_at"`
+	RateLimit         int    `gorm:"default:0" json:"rate_limit"` // RPM
+	AllowedModels     ModelList `gorm:"type:text" json:"allowed_models,omitempty"`
+	ExpiresAt         *time.Time `json:"expires_at"`
 	IsActive  bool      `gorm:"default:true" json:"is_active"`
 	CreatedAt time.Time `json:"created_at"`
 }
@@ -55,6 +61,48 @@ func (k *ApiKey) BeforeCreate(tx *gorm.DB) (err error) {
 		k.ID = uuid.New().String()
 	}
 	return
+}
+
+type ModelList []string
+
+func (m *ModelList) Scan(value interface{}) error {
+	if value == nil {
+		*m = nil
+		return nil
+	}
+
+	var raw []byte
+	switch v := value.(type) {
+	case string:
+		raw = []byte(v)
+	case []byte:
+		raw = v
+	default:
+		return fmt.Errorf("unsupported ModelList scan type: %T", value)
+	}
+
+	if len(raw) == 0 {
+		*m = nil
+		return nil
+	}
+
+	var out []string
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return err
+	}
+	*m = out
+	return nil
+}
+
+func (m ModelList) Value() (driver.Value, error) {
+	if len(m) == 0 {
+		return "[]", nil
+	}
+	b, err := json.Marshal([]string(m))
+	if err != nil {
+		return nil, err
+	}
+	return string(b), nil
 }
 
 type Transaction struct {

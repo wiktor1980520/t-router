@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import { Bell, Save } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { AxiosError } from 'axios';
 
 const Settings = () => {
   const { user, refreshUser } = useAuth();
@@ -34,8 +35,9 @@ const Settings = () => {
           return prev - 1;
         });
       }, 1000);
-    } catch (err: any) {
-      setError(err.response?.data?.error || t('auth.code_send_failed'));
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError<{ error?: string }>;
+      setError(axiosErr.response?.data?.error || t('auth.code_send_failed'));
     }
   };
 
@@ -54,8 +56,9 @@ const Settings = () => {
       await refreshUser();
       setMessage(t('settings.update_success'));
       setVerificationCode(''); // Clear code after success
-    } catch (err: any) {
-      setError(err.response?.data?.error || t('settings.update_failed'));
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError<{ error?: string }>;
+      setError(axiosErr.response?.data?.error || t('settings.update_failed'));
     } finally {
       setLoading(false);
     }

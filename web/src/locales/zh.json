@@ -72,7 +72,11 @@
     "total_users": "用户总数",
     "user_detail": "用户详情",
     "disable_user": "禁用用户",
-    "enable_user": "启用用户"
+    "enable_user": "启用用户",
+    "allowed_models": "可用模型权限",
+    "allowed_models_desc": "配置该用户允许访问的模型列表。若不选择任何模型，则默认允许访问所有公开模型。",
+    "all_models_allowed_hint": "当前未限制特定模型，用户可访问所有可用模型。",
+    "no_models_selected_warning": "未选择任何模型，默认允许所有。"
   },
   "playground": {
     "title": "模型在线测试",
@@ -261,6 +265,12 @@
     "modal_title": "创建新 API 密钥",
     "key_label": "密钥标签 (例如: 我的应用)",
     "copy_warning": "请立即复制您的 API 密钥，关闭后将无法再次查看！",
+    "allowed_models": "允许模型（可选）",
+    "allowed_models_desc": "不选择则默认允许所有可用模型",
+    "select_all": "全选",
+    "clear_selection": "清空选择",
+    "no_available_models": "暂无可用模型（请先配置上游与路由）",
+    "all_models": "全部",
     "active": "启用",
     "inactive": "禁用",
     "hide_key": "隐藏密钥",

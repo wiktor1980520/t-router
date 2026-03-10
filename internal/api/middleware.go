@@ -109,13 +109,14 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		if user.Balance <= 0 {
+		if !user.IsAdmin && user.Balance <= 0 {
 			c.AbortWithStatusJSON(http.StatusPaymentRequired, gin.H{
 				"error": "Insufficient balance",
 			})
 			return
 		}
 
+		c.Set("user_id", user.ID)
 		c.Set(ContextKeyUser, &user)
 		c.Set(ContextKeyApiKey, &apiKey)
 		c.Next()

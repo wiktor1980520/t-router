@@ -139,3 +139,32 @@ func AdminRechargeUserHandler(c *gin.Context) {
 		"new_balance_added": true,
 	})
 }
+
+// AdminUpdateUserHandler updates user details (currently just AllowedModels)
+func AdminUpdateUserHandler(c *gin.Context) {
+	id := c.Param("id")
+	var req struct {
+		AllowedModels []string `json:"allowed_models"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var user models.User
+	if err := config.DB.First(&user, "id = ?", id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// Update allowed models
+	user.AllowedModels = models.ModelList(req.AllowedModels)
+
+	if err := config.DB.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}

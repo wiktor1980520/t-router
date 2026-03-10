@@ -14,6 +14,7 @@ import {
   X
 } from 'lucide-react';
 import api from '../../lib/api';
+import type { AxiosError } from 'axios';
 
 interface User {
   id: string;
@@ -104,13 +105,14 @@ export default function AdminUsers() {
       alert(t('admin.recharge_success'));
       closeRechargeModal();
       fetchUsers(); // Refresh to show new balance
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to recharge user:', error);
+      const axiosErr = error as AxiosError<{ error?: string }>;
       let msg = t('admin.recharge_failed');
-      if (error.response?.data?.error) {
-        msg = `${msg}: ${error.response.data.error}`;
-      } else if (error.message) {
-        msg = `${msg}: ${error.message}`;
+      if (axiosErr.response?.data?.error) {
+        msg = `${msg}: ${axiosErr.response.data.error}`;
+      } else if (axiosErr.message) {
+        msg = `${msg}: ${axiosErr.message}`;
       }
       alert(msg);
     } finally {

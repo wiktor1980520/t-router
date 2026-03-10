@@ -35,7 +35,7 @@ export default function Playground() {
 
   const fetchModels = async () => {
     try {
-      const res = await api.get<Model[]>('/models');
+      const res = await api.get<Model[]>('/models/available');
       setModels(res.data);
       if (res.data.length > 0) {
         setSelectedModel(res.data[0].id);

@@ -74,6 +74,7 @@ func main() {
 	{
 		// Apply API Key Auth Middleware to chat endpoints
 		v1.POST("/chat/completions", api.AuthMiddleware(), api.ChatCompletionHandler)
+		v1.GET("/models", api.AuthMiddleware(), api.ListV1ModelsHandler)
 		
 		// Health check
 		v1.GET("/health", func(c *gin.Context) {
@@ -114,6 +115,7 @@ func main() {
 			protected.GET("/providers", api.ListProvidersHandler)
 			protected.GET("/routes", api.ListModelRoutesHandler)
 			protected.GET("/models", api.ListModelsHandler)
+			protected.GET("/models/available", api.ListAvailableModelsHandler)
 			
 			// Playground Chat Endpoint (JWT Auth)
 			protected.POST("/chat/completions", api.ChatCompletionHandler)
@@ -126,6 +128,7 @@ func main() {
 			// User Management
 			admin.GET("/users", api.AdminListUsersHandler)
 			admin.GET("/users/:id", api.AdminGetUserHandler)
+			admin.PUT("/users/:id", api.AdminUpdateUserHandler)
 			admin.PUT("/users/:id/status", api.AdminToggleUserStatusHandler)
 			admin.POST("/users/recharge", api.AdminRechargeUserHandler)
 			admin.GET("/transactions", api.AdminGetTransactionsHandler)

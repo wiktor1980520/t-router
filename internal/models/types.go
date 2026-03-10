@@ -102,6 +102,7 @@ type AuthResponse struct {
 type CreateApiKeyRequest struct {
 	Label             string `json:"label" binding:"required"`
 	RoutingPreference string `json:"routing_preference"` // 'lowest_cost', 'lowest_latency'
+	AllowedModels     []string `json:"allowed_models,omitempty"`
 }
 
 type BalanceAlertRequest struct {

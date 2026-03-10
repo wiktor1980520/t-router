@@ -3,11 +3,21 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import { CreditCard, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import type { AxiosError } from 'axios';
+
+interface Transaction {
+  id: string;
+  type: string;
+  amount: number;
+  description: string;
+  created_at: string;
+  reference_id?: string;
+}
 
 const Billing = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const [transactions, setTransactions] = useState([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [rechargeAmount, setRechargeAmount] = useState<number | ''>('');
   const [showRechargeModal, setShowRechargeModal] = useState(false);
@@ -21,7 +31,7 @@ const Billing = () => {
 
   const fetchTransactions = async () => {
     try {
-      const res = await api.get('/user/transactions');
+      const res = await api.get<Transaction[]>('/user/transactions');
       setTransactions(res.data);
     } catch (err) {
       console.error(err);
@@ -54,9 +64,10 @@ const Billing = () => {
       } else {
         alert(t('billing.payment_url_missing'));
       }
-    } catch (err: any) {
-      console.error("Payment creation failed", err);
-      const msg = err.response?.data?.error || t('billing.payment_init_failed');
+    } catch (err: unknown) {
+      console.error('Payment creation failed', err);
+      const axiosErr = err as AxiosError<{ error?: string }>;
+      const msg = axiosErr.response?.data?.error || t('billing.payment_init_failed');
       alert(msg);
     } finally {
       // If we redirected, this might not run, which is fine.
@@ -88,7 +99,7 @@ const Billing = () => {
           <h3 className="text-lg leading-6 font-medium text-white">{t('billing.transaction_history')}</h3>
         </div>
         <ul className="divide-y divide-gray-800">
-          {transactions.map((tx: any) => (
+          {transactions.map((tx) => (
             <li key={tx.id} className="px-4 py-4 sm:px-6 hover:bg-gray-800 transition-colors">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
@@ -112,7 +123,7 @@ const Billing = () => {
                   }`}>
                     {tx.type === 'recharge' ? '+' : '-'}¥{tx.amount.toFixed(8)}
                   </p>
-                  <p className="text-xs text-gray-600 font-mono">{tx.reference_id}</p>
+                  {tx.reference_id && <p className="text-xs text-gray-600 font-mono">{tx.reference_id}</p>}
                 </div>
               </div>
             </li>

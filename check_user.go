@@ -1,3 +1,5 @@
+//go:build tools
+
 package main
 
 import (
@@ -24,6 +26,6 @@ func main() {
 			log.Fatal(result.Error)
 		}
 	} else {
-		fmt.Printf("User found: ID=%d, Email=%s, IsAdmin=%v, IsActive=%v\n", user.ID, user.Email, user.IsAdmin, user.IsActive)
+		fmt.Printf("User found: ID=%s, Email=%s, IsAdmin=%v, IsActive=%v\n", user.ID, user.Email, user.IsAdmin, user.IsActive)
 	}
 }
