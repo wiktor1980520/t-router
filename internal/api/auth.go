@@ -19,6 +19,7 @@ import (
 
 var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 var turnstileSecretKey = os.Getenv("TURNSTILE_SECRET_KEY")
+var turnstileDisable = os.Getenv("TURNSTILE_DISABLE") == "true"
 
 func init() {
 	if len(jwtSecret) == 0 {
@@ -28,9 +29,17 @@ func init() {
 
 // VerifyTurnstile checks the token with Cloudflare
 func VerifyTurnstile(token string, ip string) bool {
+	if turnstileDisable {
+		log.Println("Turnstile: Disabled via env TURNSTILE_DISABLE")
+		return true
+	}
 	if turnstileSecretKey == "" {
 		log.Println("Turnstile: Skipping verification (no secret key)")
 		return true // Skip verification if key is not set (dev mode)
+	}
+	if token == "" {
+		log.Println("Turnstile: Missing token")
+		return false
 	}
 	
 	log.Printf("Turnstile: Verifying token for IP %s", ip)
@@ -43,7 +52,6 @@ func VerifyTurnstile(token string, ip string) bool {
 		map[string][]string{
 			"secret":   {turnstileSecretKey},
 			"response": {token},
-			"remoteip": {ip},
 		})
 		
 	if err != nil {
