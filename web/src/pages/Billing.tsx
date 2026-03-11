@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import { CreditCard, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
-import type { AxiosError } from 'axios';
 
 interface Transaction {
   id: string;
@@ -19,11 +18,7 @@ const Billing = () => {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [rechargeAmount, setRechargeAmount] = useState<number | ''>('');
   const [showRechargeModal, setShowRechargeModal] = useState(false);
-  const [paymentLoading, setPaymentLoading] = useState(false);
-
-  const PRESET_AMOUNTS = [50, 100, 200, 500, 800, 1000, 1500, 2000, 3000, 5000];
 
   useEffect(() => {
     fetchTransactions();
@@ -40,39 +35,22 @@ const Billing = () => {
     }
   };
 
-  const handlePayment = async (method: string) => {
-    if (!rechargeAmount || rechargeAmount <= 0) return;
+  const transferRemark = `t-router:${user?.email || t('billing.remark_email_placeholder')}`;
+  const transferReceiptEmail = 'pay@t-router.com';
+  const transferDetails = [
+    `${t('billing.payee_name')}${t('common.colon', { defaultValue: '：' })}${t('billing.payee_name_value')}`,
+    `${t('billing.payee_bank')}${t('common.colon', { defaultValue: '：' })}${t('billing.payee_bank_value')}`,
+    `${t('billing.payee_account')}${t('common.colon', { defaultValue: '：' })}${t('billing.payee_account_value')}`,
+    `${t('billing.payee_remark')}${t('common.colon', { defaultValue: '：' })}${transferRemark}`,
+    `${t('billing.receipt_email')}${t('common.colon', { defaultValue: '：' })}${transferReceiptEmail}`,
+  ].join('\n');
+
+  const copyText = async (text: string) => {
     try {
-      setPaymentLoading(true);
-      const res = await api.post('/payment/create', { 
-        amount: Number(rechargeAmount),
-        method: method
-      });
-      
-      if (res.data.payment_url) {
-        // Create a temporary link to open in new tab if needed, 
-        // but for payment gateways usually top-level redirect is best.
-        // However, some users prefer new tab to keep the app open.
-        // Let's stick to current window but ensure it's a valid URL.
-        try {
-            const url = new URL(res.data.payment_url);
-            window.location.href = url.toString();
-        } catch (e) {
-            console.error("Invalid payment URL", res.data.payment_url, e);
-            alert(t('billing.invalid_payment_url'));
-        }
-      } else {
-        alert(t('billing.payment_url_missing'));
-      }
-    } catch (err: unknown) {
-      console.error('Payment creation failed', err);
-      const axiosErr = err as AxiosError<{ error?: string }>;
-      const msg = axiosErr.response?.data?.error || t('billing.payment_init_failed');
-      alert(msg);
-    } finally {
-      // If we redirected, this might not run, which is fine.
-      // If we didn't redirect (error), we need to stop loading.
-      setPaymentLoading(false);
+      await navigator.clipboard.writeText(text);
+      alert(t('billing.copied'));
+    } catch {
+      alert(t('billing.copy_failed'));
     }
   };
 
@@ -138,50 +116,32 @@ const Billing = () => {
       {showRechargeModal && (
         <div className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50">
           <div className="bg-gray-800 rounded-lg max-w-sm w-full p-6 border border-gray-700 shadow-xl">
-            <h3 className="text-lg font-medium text-white mb-4">{t('billing.add_funds')}</h3>
+            <h3 className="text-lg font-medium text-white mb-4">{t('billing.bank_transfer_title')}</h3>
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-3">{t('billing.amount_usd')}</label>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-4">
-                  {PRESET_AMOUNTS.map((amount) => (
+                <div className="rounded-lg border border-gray-700 bg-gray-900 p-4 space-y-3">
+                  <div className="text-sm text-gray-200 font-medium">{t('billing.transfer_notice_title')}</div>
+                  <div className="text-sm text-gray-400 leading-relaxed">{t('billing.transfer_notice_desc')}</div>
+                  <pre className="whitespace-pre-wrap break-words text-xs text-gray-300 bg-gray-950 border border-gray-800 rounded-md p-3">
+                    {transferDetails}
+                  </pre>
+                  <div className="grid grid-cols-2 gap-3">
                     <button
-                      key={amount}
-                      onClick={() => setRechargeAmount(amount)}
-                      className={`px-2 py-2 text-sm font-medium rounded-md border transition-colors ${
-                        rechargeAmount === amount
-                          ? 'bg-blue-600 border-blue-600 text-white'
-                          : 'bg-gray-900 border-gray-700 text-gray-300 hover:bg-gray-800 hover:border-gray-600'
-                      }`}
+                      onClick={() => copyText(transferDetails)}
+                      className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-md text-sm"
                     >
-                      ¥{amount}
+                      {t('billing.copy_all')}
                     </button>
-                  ))}
-                </div>
-                <div className="relative rounded-md shadow-sm">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                    <span className="text-gray-500 sm:text-sm">¥</span>
+                    <button
+                      onClick={() => copyText(transferRemark)}
+                      className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm"
+                    >
+                      {t('billing.copy_remark')}
+                    </button>
                   </div>
-                  <input
-                    type="number"
-                    min="1"
-                    className="block w-full rounded-md border-0 bg-gray-900 py-2.5 pl-7 pr-3 text-white ring-1 ring-inset ring-gray-700 placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                    placeholder={t('billing.custom_amount')}
-                    value={rechargeAmount}
-                    onChange={(e) => setRechargeAmount(e.target.value ? Number(e.target.value) : '')}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">{t('billing.payment_method')}</label>
-                <div className="grid grid-cols-1 gap-3">
-                  <button
-                    onClick={() => handlePayment('bestpay')}
-                    disabled={paymentLoading}
-                    className="flex items-center justify-center px-4 py-3 border border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-200 bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {paymentLoading ? t('common.processing') : t('billing.bestpay')}
-                  </button>
+                  <div className="text-xs text-gray-400 leading-relaxed">
+                    {t('billing.transfer_receipt_hint', { email: transferReceiptEmail, account: user?.email || '-' , phone: user?.phone || '-' })}
+                  </div>
                 </div>
               </div>
 

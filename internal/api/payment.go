@@ -117,6 +117,12 @@ func CreatePaymentHandler(c *gin.Context) {
 	if channel == "" {
 		channel = "bestpay"
 	}
+	if channel == "bestpay" {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"error": "BestPay is disabled. Please use bank transfer.",
+		})
+		return
+	}
 
 	// 1. Create a pending transaction
 	orderID := uuid.New().String()
