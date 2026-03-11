@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
-import { Plus, Trash2, Copy, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, Copy, Eye, EyeOff, Code2, Download } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 // import { useAuth } from '../context/AuthContext';
 
@@ -19,6 +19,8 @@ interface ApiKey {
   allowed_models?: string[];
 }
 
+type ExampleType = 'curl' | 'node' | 'python' | 'openclaw';
+
 const ApiKeys = () => {
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +30,8 @@ const ApiKeys = () => {
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
   const [availableModels, setAvailableModels] = useState<Model[]>([]);
   const [allowedModels, setAllowedModels] = useState<Set<string>>(new Set());
+  const [showExamplesModal, setShowExamplesModal] = useState(false);
+  const [exampleType, setExampleType] = useState<ExampleType>('curl');
   const { t } = useTranslation();
   // const { user } = useAuth(); // Get user from AuthContext
 
@@ -105,6 +109,130 @@ const ApiKeys = () => {
     }
   };
 
+  const v1BaseUrl = (() => {
+    return `https://api.t-router.com/v1`;
+  })();
+
+  const buildCurlExample = (url: string, apiKey: string, payload: string) => {
+    return [
+      `curl "${url}" \\`,
+      `  -H "Authorization: Bearer ${apiKey}" \\`,
+      `  -H "Content-Type: application/json" \\`,
+      `  -d '${payload}'`,
+    ].join('\n');
+  };
+
+  const buildNodeExample = (url: string, apiKey: string, model: string) => {
+    return [
+      `const url = "${url}";`,
+      `const apiKey = "${apiKey}";`,
+      ``,
+      `const res = await fetch(url, {`,
+      `  method: "POST",`,
+      `  headers: {`,
+      `    Authorization: \`Bearer \${apiKey}\`,`,
+      `    "Content-Type": "application/json",`,
+      `  },`,
+      `  body: JSON.stringify({`,
+      `    model: "${model}",`,
+      `    messages: [{ role: "user", content: "Hello!" }],`,
+      `  }),`,
+      `});`,
+      ``,
+      `if (!res.ok) {`,
+      `  throw new Error(\`HTTP \${res.status}: \${await res.text()}\`);`,
+      `}`,
+      ``,
+      `const data = await res.json();`,
+      `console.log(data.choices?.[0]?.message?.content ?? data);`,
+    ].join('\n');
+  };
+
+  const buildPythonExample = (url: string, apiKey: string, model: string) => {
+    return [
+      `import os`,
+      `import requests`,
+      ``,
+      `url = "${url}"`,
+      `api_key = os.getenv("TROUTER_API_KEY", "${apiKey}")`,
+      ``,
+      `payload = {`,
+      `  "model": "${model}",`,
+      `  "messages": [{"role": "user", "content": "Hello!"}],`,
+      `}`,
+      ``,
+      `resp = requests.post(url, headers={`,
+      `  "Authorization": f"Bearer {api_key}",`,
+      `  "Content-Type": "application/json",`,
+      `}, json=payload, timeout=60)`,
+      ``,
+      `resp.raise_for_status()`,
+      `data = resp.json()`,
+      `print(data["choices"][0]["message"]["content"])`,
+    ].join('\n');
+  };
+
+  const buildExample = (type: ExampleType): string => {
+    const apiKey = '<YOUR_API_KEY>';
+    const model = '<MODEL>';
+    const url = `${v1BaseUrl}/chat/completions`;
+    const payload = `{"model":"${model}","messages":[{"role":"user","content":"Hello!"}]}`;
+
+    if (type === 'openclaw') {
+      return [
+        `${t('keys.openclaw_title')}`,
+        ``,
+        `${t('keys.openclaw_base_url')}: https://api.t-router.com/v1`,
+        `${t('keys.openclaw_auth')}: Authorization: Bearer <API_KEY>`,
+        `${t('keys.openclaw_endpoint')}: /chat/completions`,
+        ``,
+        `${t('keys.openclaw_steps')}`,
+        `1) ${t('keys.openclaw_step_1')}`,
+        `2) ${t('keys.openclaw_step_2')}`,
+        `3) ${t('keys.openclaw_step_3')}`,
+        `4) ${t('keys.openclaw_step_4')}`,
+        ``,
+        `${t('keys.openclaw_test')}`,
+        buildCurlExample(url, apiKey, payload),
+      ].join('\n');
+    }
+
+    if (type === 'curl') {
+      return buildCurlExample(url, apiKey, payload);
+    }
+
+    if (type === 'node') {
+      return buildNodeExample(url, apiKey, model);
+    }
+
+    return buildPythonExample(url, apiKey, model);
+  };
+
+  const downloadText = (filename: string, content: string) => {
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadDemo = (type: ExampleType) => {
+    const content = buildExample(type);
+    const filename =
+      type === 'curl'
+        ? 'trouter-demo.sh'
+        : type === 'node'
+          ? 'trouter-demo.mjs'
+          : type === 'python'
+            ? 'trouter-demo.py'
+            : 'openclaw-setup.txt';
+    downloadText(filename, content);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -116,6 +244,42 @@ const ApiKeys = () => {
             <Plus className="mr-2 h-5 w-5" />
             {t('keys.create_new')}
           </button>
+      </div>
+
+      <div className="bg-gray-900 border border-gray-800 rounded-md p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="space-y-1">
+          <div className="text-sm font-medium text-white">{t('keys.integration_examples')}</div>
+          <div className="text-xs text-gray-400">{t('keys.integration_examples_desc')}</div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setShowExamplesModal(true)}
+            className="inline-flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-750 text-white rounded border border-gray-700"
+          >
+            <Code2 className="h-4 w-4" />
+            {t('keys.view_examples')}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setExampleType('openclaw');
+              setShowExamplesModal(true);
+            }}
+            className="inline-flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-750 text-white rounded border border-gray-700"
+          >
+            <Code2 className="h-4 w-4" />
+            {t('keys.openclaw_tab')}
+          </button>
+          <button
+            type="button"
+            onClick={() => downloadDemo('node')}
+            className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded border border-transparent"
+          >
+            <Download className="h-4 w-4" />
+            {t('keys.download_demo')}
+          </button>
+        </div>
       </div>
 
       {/* Keys List */}
@@ -171,6 +335,94 @@ const ApiKeys = () => {
           )}
         </ul>
       </div>
+
+      {showExamplesModal && (
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-800 rounded-lg max-w-3xl w-full p-6 border border-gray-700">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div className="space-y-1">
+                <h3 className="text-lg font-medium text-white">{t('keys.examples_modal_title')}</h3>
+                <div className="text-xs text-gray-400">{t('keys.examples_modal_desc')}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowExamplesModal(false)}
+                className="px-3 py-2 bg-gray-900 hover:bg-gray-850 text-white rounded border border-gray-700"
+              >
+                {t('common.cancel')}
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-4">
+              <button
+                type="button"
+                onClick={() => setExampleType('curl')}
+                className={`px-3 py-2 rounded border ${exampleType === 'curl' ? 'bg-blue-600 border-blue-500 text-white' : 'bg-gray-900 border-gray-700 text-gray-200 hover:bg-gray-850'}`}
+              >
+                cURL
+              </button>
+              <button
+                type="button"
+                onClick={() => setExampleType('node')}
+                className={`px-3 py-2 rounded border ${exampleType === 'node' ? 'bg-blue-600 border-blue-500 text-white' : 'bg-gray-900 border-gray-700 text-gray-200 hover:bg-gray-850'}`}
+              >
+                Node.js
+              </button>
+              <button
+                type="button"
+                onClick={() => setExampleType('python')}
+                className={`px-3 py-2 rounded border ${exampleType === 'python' ? 'bg-blue-600 border-blue-500 text-white' : 'bg-gray-900 border-gray-700 text-gray-200 hover:bg-gray-850'}`}
+              >
+                Python
+              </button>
+              <button
+                type="button"
+                onClick={() => setExampleType('openclaw')}
+                className={`px-3 py-2 rounded border ${exampleType === 'openclaw' ? 'bg-blue-600 border-blue-500 text-white' : 'bg-gray-900 border-gray-700 text-gray-200 hover:bg-gray-850'}`}
+              >
+                OpenClaw
+              </button>
+            </div>
+
+            <div className="bg-gray-900 border border-gray-700 rounded-md overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-700 flex flex-wrap items-center justify-between gap-2">
+                <div className="text-xs text-gray-400">
+                  {exampleType === 'openclaw' ? (
+                    <>
+                      {t('keys.openclaw_base_url')}: <span className="font-mono text-gray-200">https://api.t-router.com/v1</span>
+                    </>
+                  ) : (
+                    <>
+                      {t('keys.api_endpoint')}: <span className="font-mono text-gray-200">{v1BaseUrl}/chat/completions</span>
+                    </>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard.writeText(buildExample(exampleType))}
+                    className="inline-flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-750 text-white rounded border border-gray-700"
+                  >
+                    <Copy className="h-4 w-4" />
+                    {t('keys.copy_example')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadDemo(exampleType)}
+                    className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded border border-transparent"
+                  >
+                    <Download className="h-4 w-4" />
+                    {exampleType === 'openclaw' ? t('keys.download_openclaw') : t('keys.download_example')}
+                  </button>
+                </div>
+              </div>
+              <pre className="p-4 text-sm text-gray-200 overflow-auto max-h-[60vh]">
+                <code className="font-mono whitespace-pre">{buildExample(exampleType)}</code>
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* New Key Modal */}
       {showNewKeyModal && (

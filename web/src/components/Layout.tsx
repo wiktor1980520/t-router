@@ -14,13 +14,13 @@ const Layout = () => {
   const navigation = [
     { name: t('nav.dashboard'), href: '/dashboard', icon: LayoutDashboard },
     { name: t('nav.playground'), href: '/dashboard/playground', icon: MessageSquare },
-    { name: t('nav.models'), href: '/dashboard/models', icon: Database },
     { name: t('nav.api_keys'), href: '/dashboard/keys', icon: Key },
     { name: t('nav.billing'), href: '/dashboard/billing', icon: CreditCard },
     { name: t('nav.settings'), href: '/dashboard/settings', icon: Settings },
   ];
 
   if (user?.is_admin) {
+    navigation.splice(2, 0, { name: t('nav.models'), href: '/admin/models', icon: Database });
     navigation.push({ name: t('nav.admin'), href: '/admin', icon: ShieldCheck });
   }
 
