@@ -14,19 +14,31 @@ try {
   fs.writeFileSync(path.resolve(__dirname, 'build_info.json'), JSON.stringify({ build: 0 }))
 }
 
+const readWranglerVar = (key: string): string => {
+  const wranglerPath = path.resolve(__dirname, 'wrangler.toml')
+  if (!fs.existsSync(wranglerPath)) return ''
+
+  const content = fs.readFileSync(wranglerPath, 'utf-8')
+  const re = new RegExp(`^\\s*${key}\\s*=\\s*"(.*?)"\\s*$`, 'm')
+  const m = content.match(re)
+  return (m?.[1] || '').trim()
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_')
 
   const rawApiBase = (env.VITE_API_BASE_URL || '').trim()
-  const proxyTarget = rawApiBase
-    ? rawApiBase.replace(/\/+$/, '').replace(/\/(api|v1)$/, '')
+  const resolvedApiBase = rawApiBase || readWranglerVar('VITE_API_BASE_URL')
+  const proxyTarget = resolvedApiBase
+    ? resolvedApiBase.replace(/\/+$/, '').replace(/\/(api|v1)$/, '')
     : ''
 
   return {
     plugins: [react()],
     define: {
-      __APP_VERSION__: JSON.stringify(`v${pkg.version}.${buildInfo.build}`)
+      __APP_VERSION__: JSON.stringify(`v${pkg.version}.${buildInfo.build}`),
+      ...(rawApiBase ? {} : (resolvedApiBase ? { 'import.meta.env.VITE_API_BASE_URL': JSON.stringify(resolvedApiBase) } : {})),
     },
     server: proxyTarget
       ? {
