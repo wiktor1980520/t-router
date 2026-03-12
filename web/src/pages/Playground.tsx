@@ -69,12 +69,14 @@ export default function Playground() {
       const assistantMessage: Message = { role: 'assistant', content: '' };
       setMessages([...newMessages, assistantMessage]);
 
-      const API_BASE = import.meta.env.VITE_API_BASE_URL;
-      const endpoint = API_BASE ? `${API_BASE}/api/chat/completions` : '/api/chat/completions';
-      const response = await fetch(endpoint, {
+      const baseURL = (api.defaults.baseURL || '/api').toString().replace(/\/+$/, '');
+      const endpoint = `${baseURL}/chat/completions`;
+
+      const requestInit: RequestInit = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({
@@ -82,7 +84,25 @@ export default function Playground() {
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
           stream: true,
         }),
-      });
+      };
+
+      let response: Response;
+      try {
+        response = await fetch(endpoint, requestInit);
+      } catch (e) {
+        const fallbackEndpoint = '/api/chat/completions';
+        if (endpoint !== fallbackEndpoint) {
+          try {
+            response = await fetch(fallbackEndpoint, requestInit);
+          } catch (e2) {
+            const msg1 = e instanceof Error ? e.message : String(e);
+            const msg2 = e2 instanceof Error ? e2.message : String(e2);
+            throw new Error(`Failed to fetch (${endpoint}); fallback (${fallbackEndpoint}): ${msg2 || msg1}`);
+          }
+        } else {
+          throw e;
+        }
+      }
 
       if (!response.ok) {
         const requestId = response.headers.get('X-Request-ID');
