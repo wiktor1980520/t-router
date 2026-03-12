@@ -110,8 +110,13 @@ export default function Playground() {
         throw new Error(`HTTP ${res.status}: ${await res.text()}`);
       }
 
-      const ids: string[] = await res.json();
-      const list = ids.map(id => ({ id, name: id }));
+      const payload: unknown = await res.json();
+      const ids = Array.isArray(payload)
+        ? payload
+        : ((payload as { data?: Array<{ id?: unknown }> })?.data ?? []).map(m => m?.id);
+      const list = ids
+        .filter((x): x is string => typeof x === 'string' && x.length > 0)
+        .map(id => ({ id, name: id }));
       setModels(list);
       if (list.length > 0) {
         setSelectedModel(list[0].id);
