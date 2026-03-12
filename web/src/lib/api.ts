@@ -1,6 +1,18 @@
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL;
+declare const __API_BASE_URL__: string | undefined;
+
+const inferApiBase = (): string | undefined => {
+  if (typeof window === 'undefined') return undefined;
+  const host = window.location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1') return undefined;
+  return 'https://api.t-router.com';
+};
+
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof __API_BASE_URL__ !== 'undefined' ? __API_BASE_URL__ : undefined) ||
+  inferApiBase();
 
 const joinBase = (base: string, suffix: '/api' | '/v1') => {
   const trimmed = base.replace(/\/+$/, '');

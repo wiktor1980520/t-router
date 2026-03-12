@@ -38,7 +38,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     define: {
       __APP_VERSION__: JSON.stringify(`v${pkg.version}.${buildInfo.build}`),
-      ...(rawApiBase ? {} : (resolvedApiBase ? { 'import.meta.env.VITE_API_BASE_URL': JSON.stringify(resolvedApiBase) } : {})),
+      ...(resolvedApiBase ? { __API_BASE_URL__: JSON.stringify(resolvedApiBase) } : {}),
     },
     server: proxyTarget
       ? {
