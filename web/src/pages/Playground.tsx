@@ -87,6 +87,7 @@ export default function Playground() {
       };
 
       let response: Response;
+      let usedEndpoint = endpoint;
       try {
         response = await fetch(endpoint, requestInit);
       } catch (e) {
@@ -94,6 +95,7 @@ export default function Playground() {
         if (endpoint !== fallbackEndpoint) {
           try {
             response = await fetch(fallbackEndpoint, requestInit);
+            usedEndpoint = fallbackEndpoint;
           } catch (e2) {
             const msg1 = e instanceof Error ? e.message : String(e);
             const msg2 = e2 instanceof Error ? e2.message : String(e2);
@@ -125,6 +127,7 @@ export default function Playground() {
         if (requestId) {
           message = `${message} (req: ${requestId})`;
         }
+        message = `${message} (endpoint: ${usedEndpoint})`;
 
         throw new Error(message);
       }
