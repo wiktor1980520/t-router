@@ -91,8 +91,10 @@ export default function Playground() {
       try {
         response = await fetch(endpoint, requestInit);
       } catch (e) {
+        const fetchMsg = e instanceof Error ? e.message : String(e);
+        const canFallback = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
         const fallbackEndpoint = '/api/chat/completions';
-        if (endpoint !== fallbackEndpoint) {
+        if (canFallback && endpoint !== fallbackEndpoint) {
           try {
             response = await fetch(fallbackEndpoint, requestInit);
             usedEndpoint = fallbackEndpoint;
@@ -102,7 +104,7 @@ export default function Playground() {
             throw new Error(`Failed to fetch (${endpoint}); fallback (${fallbackEndpoint}): ${msg2 || msg1}`);
           }
         } else {
-          throw e;
+          throw new Error(`Failed to fetch (${endpoint}): ${fetchMsg}`);
         }
       }
 
