@@ -9,8 +9,8 @@ type ChatCompletionRequest struct {
 	MaxTokens   int       `json:"max_tokens"`
 	
 	// Routing Extensions
-	RoutingStrategy   string        `json:"routing_strategy"`
-	ProviderAllowlist []string      `json:"provider_allowlist"`
+	RoutingStrategy   string        `json:"routing_strategy,omitempty"`
+	ProviderAllowlist []string      `json:"provider_allowlist,omitempty"`
 	StreamOptions     *StreamOptions `json:"stream_options,omitempty"`
 }
 

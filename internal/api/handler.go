@@ -124,6 +124,7 @@ func ChatCompletionHandler(c *gin.Context) {
 	}
 
 	var lastErr error
+	attempts := make([]gin.H, 0, len(routeResults))
 	// Fallback Loop
 	for _, result := range routeResults {
 		log.Printf("Attempting provider %s (Route ID: %d) for request %s", result.Provider.Name(), result.ModelRoute.ID, requestID)
@@ -139,6 +140,14 @@ func ChatCompletionHandler(c *gin.Context) {
 		}
 		
 		lastErr = err
+		attempts = append(attempts, gin.H{
+			"route_id":       result.ModelRoute.ID,
+			"provider_id":    result.ModelRoute.ProviderID,
+			"provider_name":  result.ModelRoute.Provider.Name,
+			"provider_type":  result.ModelRoute.Provider.Type,
+			"failure_count":  result.ModelRoute.FailureCount,
+			"provider_error": err.Error(),
+		})
 		log.Printf("Provider %s (Route ID: %d) failed: %v. Retrying next provider...", result.Provider.Name(), result.ModelRoute.ID, err)
 	}
 
@@ -158,7 +167,15 @@ func ChatCompletionHandler(c *gin.Context) {
 		config.DB.Create(&auditLog)
 	}
 
-	c.JSON(http.StatusBadGateway, gin.H{"error": "All providers failed", "details": lastErr.Error()})
+	if lastErr == nil {
+		lastErr = fmt.Errorf("unknown provider failure")
+	}
+	c.JSON(http.StatusBadGateway, gin.H{
+		"error":      "All providers failed",
+		"details":    lastErr.Error(),
+		"request_id": requestID,
+		"attempts":   attempts,
+	})
 }
 
 func attemptNormalResponse(c *gin.Context, p provider.Provider, route *models.ModelRoute, req *models.ChatCompletionRequest, requestID string, startTime time.Time) error {

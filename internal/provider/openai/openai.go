@@ -20,6 +20,26 @@ type OpenAIProvider struct {
 	client  *http.Client
 }
 
+type upstreamChatCompletionRequest struct {
+	Model       string           `json:"model"`
+	Messages    []models.Message `json:"messages"`
+	Stream      bool             `json:"stream,omitempty"`
+	Temperature float64          `json:"temperature,omitempty"`
+	MaxTokens   int              `json:"max_tokens,omitempty"`
+	StreamOptions *models.StreamOptions `json:"stream_options,omitempty"`
+}
+
+func buildUpstreamRequest(req *models.ChatCompletionRequest) upstreamChatCompletionRequest {
+	return upstreamChatCompletionRequest{
+		Model:         req.Model,
+		Messages:      req.Messages,
+		Stream:        req.Stream,
+		Temperature:   req.Temperature,
+		MaxTokens:     req.MaxTokens,
+		StreamOptions: req.StreamOptions,
+	}
+}
+
 func NewOpenAIProvider(apiKey string, baseURL string) provider.Provider {
 	if baseURL == "" {
 		baseURL = "https://api.openai.com/v1"
@@ -64,7 +84,8 @@ func (p *OpenAIProvider) chatCompletionsURL() string {
 
 func (p *OpenAIProvider) ChatCompletion(ctx context.Context, req *models.ChatCompletionRequest) (*models.ChatCompletionResponse, error) {
 	// Prepare request body
-	reqBody, err := json.Marshal(req)
+	upstreamReq := buildUpstreamRequest(req)
+	reqBody, err := json.Marshal(upstreamReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %v", err)
 	}
@@ -102,7 +123,8 @@ func (p *OpenAIProvider) ChatCompletionStream(ctx context.Context, req *models.C
 	// Force stream to true
 	req.Stream = true
 	
-	reqBody, err := json.Marshal(req)
+	upstreamReq := buildUpstreamRequest(req)
+	reqBody, err := json.Marshal(upstreamReq)
 	if err != nil {
 		return fmt.Errorf("failed to marshal request: %v", err)
 	}
