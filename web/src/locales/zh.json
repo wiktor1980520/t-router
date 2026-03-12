@@ -79,6 +79,8 @@
     "total_tokens": "Token 消耗总数",
     "usage_overview": "用量概览",
     "available_models": "可用模型与定价",
+    "provider": "模型提供商",
+    "latency": "延迟",
     "recent_transactions": "最近交易",
     "no_transactions": "暂无交易记录"
   },

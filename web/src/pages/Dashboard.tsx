@@ -13,6 +13,21 @@ interface Model {
   context_length: number;
 }
 
+interface Provider {
+  id: number;
+  name: string;
+  is_active: boolean;
+}
+
+interface ModelRoute {
+  id: number;
+  model_name: string;
+  is_active: boolean;
+  priority: number;
+  latency: number;
+  provider: Provider;
+}
+
 interface Transaction {
   id: string;
   type: string;
@@ -38,19 +53,30 @@ const Dashboard = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [stats, setStats] = useState<UserStats>({ total_api_calls: 0, total_tokens: 0, daily_usage: [] });
   const [models, setModels] = useState<Model[]>([]);
+  const [routesByModel, setRoutesByModel] = useState<Map<string, ModelRoute[]>>(new Map());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [txRes, statsRes, modelsRes] = await Promise.all([
+        const [txRes, statsRes, modelsRes, routesRes] = await Promise.all([
           api.get<Transaction[]>('/user/transactions'),
           api.get<UserStats>('/user/stats'),
-          api.get<Model[]>('/models/available')
+          api.get<Model[]>('/models/available'),
+          api.get<ModelRoute[]>('/routes'),
         ]);
         setTransactions(txRes.data.slice(0, 5)); // Get recent 5
         setStats(statsRes.data);
         setModels(modelsRes.data);
+        const byModel = new Map<string, ModelRoute[]>();
+        for (const route of routesRes.data) {
+          if (!route.is_active) continue;
+          if (route.provider && !route.provider.is_active) continue;
+          const list = byModel.get(route.model_name) ?? [];
+          list.push(route);
+          byModel.set(route.model_name, list);
+        }
+        setRoutesByModel(byModel);
       } catch (err) {
         console.error(err);
       } finally {
@@ -157,8 +183,19 @@ const Dashboard = () => {
           <h3 className="text-lg leading-6 font-medium text-white">{t('dashboard.available_models')}</h3>
         </div>
         <ul className="divide-y divide-gray-800">
-          {models.map((model) => (
-            <li key={model.id} className="px-4 py-4 sm:px-6">
+          {models.map((model) => {
+            const candidates = routesByModel.get(model.id) ?? [];
+            const displayRoute = [...candidates].sort((a, b) => {
+              if (a.priority !== b.priority) return b.priority - a.priority;
+              const aLatency = a.latency > 0 ? a.latency : Number.POSITIVE_INFINITY;
+              const bLatency = b.latency > 0 ? b.latency : Number.POSITIVE_INFINITY;
+              return aLatency - bLatency;
+            })[0];
+            const providerName = displayRoute?.provider?.name;
+            const latency = displayRoute?.latency && displayRoute.latency > 0 ? `${displayRoute.latency}ms` : '-';
+
+            return (
+              <li key={model.id} className="px-4 py-4 sm:px-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="bg-gray-800 p-2 rounded-lg">
@@ -172,11 +209,16 @@ const Dashboard = () => {
                       <span className="text-xs text-gray-500">Out: ¥{model.retail_price_output}/1M</span>
                       <span className="text-xs text-gray-500">Ctx: {model.context_length}</span>
                     </div>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="text-xs text-gray-500">{t('dashboard.provider')}: {providerName || '-'}</span>
+                      <span className="text-xs text-gray-500">{t('dashboard.latency')}: {latency}</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </li>
-          ))}
+            );
+          })}
           {models.length === 0 && !loading && (
             <li className="px-6 py-4 text-center text-gray-500 text-sm">{t('models.no_models')}</li>
           )}
