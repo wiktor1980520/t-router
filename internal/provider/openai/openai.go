@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"trouter/internal/models"
 	"trouter/internal/provider"
@@ -25,13 +26,40 @@ func NewOpenAIProvider(apiKey string, baseURL string) provider.Provider {
 	}
 	return &OpenAIProvider{
 		apiKey:  apiKey,
-		baseURL: baseURL,
+		baseURL: normalizeBaseURL(baseURL),
 		client:  &http.Client{},
 	}
 }
 
 func (p *OpenAIProvider) Name() string {
 	return "openai"
+}
+
+func normalizeBaseURL(baseURL string) string {
+	baseURL = strings.TrimSpace(baseURL)
+	baseURL = strings.TrimRight(baseURL, "/")
+	if strings.HasSuffix(baseURL, "/chat/completions") {
+		baseURL = strings.TrimSuffix(baseURL, "/chat/completions")
+		baseURL = strings.TrimRight(baseURL, "/")
+	}
+	return baseURL
+}
+
+func joinURLPath(baseURL string, p string) string {
+	baseURL = strings.TrimRight(baseURL, "/") + "/"
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		return strings.TrimRight(baseURL, "/") + "/" + strings.TrimLeft(p, "/")
+	}
+	ref, err := url.Parse(strings.TrimLeft(p, "/"))
+	if err != nil {
+		return strings.TrimRight(baseURL, "/") + "/" + strings.TrimLeft(p, "/")
+	}
+	return u.ResolveReference(ref).String()
+}
+
+func (p *OpenAIProvider) chatCompletionsURL() string {
+	return joinURLPath(p.baseURL, "chat/completions")
 }
 
 func (p *OpenAIProvider) ChatCompletion(ctx context.Context, req *models.ChatCompletionRequest) (*models.ChatCompletionResponse, error) {
@@ -42,7 +70,7 @@ func (p *OpenAIProvider) ChatCompletion(ctx context.Context, req *models.ChatCom
 	}
 
 	// Create HTTP request
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", p.baseURL+"/chat/completions", bytes.NewBuffer(reqBody))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", p.chatCompletionsURL(), bytes.NewBuffer(reqBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
@@ -79,12 +107,13 @@ func (p *OpenAIProvider) ChatCompletionStream(ctx context.Context, req *models.C
 		return fmt.Errorf("failed to marshal request: %v", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", p.baseURL+"/chat/completions", bytes.NewBuffer(reqBody))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", p.chatCompletionsURL(), bytes.NewBuffer(reqBody))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %v", err)
 	}
 
 	p.setHeaders(httpReq)
+	httpReq.Header.Set("Accept", "text/event-stream")
 
 	resp, err := p.client.Do(httpReq)
 	if err != nil {

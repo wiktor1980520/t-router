@@ -20,6 +20,11 @@ type Router struct {
 	providerCache sync.Map
 }
 
+type providerCacheEntry struct {
+	provider     provider.Provider
+	fingerprint  string
+}
+
 var globalRouter *Router
 var once sync.Once
 
@@ -240,10 +245,19 @@ func weightedSelectIndex(routes []models.ModelRoute) int {
 	return len(routes) - 1 // Should not happen
 }
 
+func providerFingerprint(p *models.Provider) string {
+	return fmt.Sprintf("%s|%s|%s", p.Type, p.BaseURL, p.ApiKey)
+}
+
 func (r *Router) getProviderInstance(p *models.Provider) (provider.Provider, error) {
+	fingerprint := providerFingerprint(p)
+
 	// Check cache
 	if val, ok := r.providerCache.Load(p.ID); ok {
-		return val.(provider.Provider), nil
+		entry := val.(providerCacheEntry)
+		if entry.fingerprint == fingerprint {
+			return entry.provider, nil
+		}
 	}
 
 	// Create new instance
@@ -253,6 +267,6 @@ func (r *Router) getProviderInstance(p *models.Provider) (provider.Provider, err
 	}
 
 	// Store in cache
-	r.providerCache.Store(p.ID, prov)
+	r.providerCache.Store(p.ID, providerCacheEntry{provider: prov, fingerprint: fingerprint})
 	return prov, nil
 }

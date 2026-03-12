@@ -85,7 +85,28 @@ export default function Playground() {
       });
 
       if (!response.ok) {
-        throw new Error(response.statusText);
+        const requestId = response.headers.get('X-Request-ID');
+        let detail = '';
+        try {
+          detail = await response.text();
+        } catch {
+          detail = '';
+        }
+
+        let message = response.statusText || `HTTP ${response.status}`;
+        if (detail) {
+          try {
+            const parsed = JSON.parse(detail);
+            message = parsed?.details ? `${parsed?.error || message}: ${parsed.details}` : (parsed?.error || detail);
+          } catch {
+            message = detail;
+          }
+        }
+        if (requestId) {
+          message = `${message} (req: ${requestId})`;
+        }
+
+        throw new Error(message);
       }
 
       if (!response.body) throw new Error('No response body');
@@ -149,7 +170,8 @@ export default function Playground() {
       }
     } catch (error) {
       console.error('Failed to send message:', error);
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Error: Failed to get response from model.' }]);
+      const msg = error instanceof Error ? error.message : 'Failed to get response from model.';
+      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${msg}` }]);
     } finally {
       setLoading(false);
       setStreaming(false);
