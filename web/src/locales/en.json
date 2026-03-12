@@ -29,6 +29,7 @@
   },
   "playground": {
     "title": "AI Playground",
+    "select_api_key": "Select an API key",
     "select_model": "Select a model",
     "clear_history": "Clear history",
     "empty_state": "Start a conversation with the AI...",

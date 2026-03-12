@@ -28,6 +28,8 @@ export default function Playground() {
   const { t } = useTranslation();
   const [models, setModels] = useState<Model[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>('');
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
+  const [selectedApiKeyId, setSelectedApiKeyId] = useState<string>('');
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -35,7 +37,7 @@ export default function Playground() {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchModels();
+    fetchApiKeys();
   }, []);
 
   useEffect(() => {
@@ -47,7 +49,38 @@ export default function Playground() {
     return raw.replace(/\/(api|v1)$/, '');
   })();
 
+  const fetchApiKeys = async () => {
+    try {
+      const res = await api.get<ApiKey[]>('/keys');
+      const usable = res.data.filter(k => k.is_active && k.key);
+      setApiKeys(usable);
+
+      const cachedId = localStorage.getItem('playground_api_key_id') || '';
+      const defaultKey = (cachedId && usable.find(k => k.id === cachedId)) || usable[0];
+      if (defaultKey) {
+        setSelectedApiKeyId(defaultKey.id);
+        localStorage.setItem('playground_api_key_id', defaultKey.id);
+        localStorage.setItem('playground_api_key', defaultKey.key!);
+        fetchModels(defaultKey.key!);
+      } else {
+        const created = await ensurePlaygroundApiKey();
+        fetchModels(created);
+      }
+    } catch (error) {
+      console.error('Failed to fetch API keys:', error);
+      const created = await ensurePlaygroundApiKey();
+      fetchModels(created);
+    }
+  };
+
   const ensurePlaygroundApiKey = async (): Promise<string> => {
+    const selected = selectedApiKeyId ? apiKeys.find(k => k.id === selectedApiKeyId) : undefined;
+    if (selected?.key) {
+      localStorage.setItem('playground_api_key_id', selected.id);
+      localStorage.setItem('playground_api_key', selected.key);
+      return selected.key;
+    }
+
     const cached = localStorage.getItem('playground_api_key');
     if (cached) return cached;
 
@@ -63,9 +96,9 @@ export default function Playground() {
     return created.data.key;
   };
 
-  const fetchModels = async () => {
+  const fetchModels = async (apiKeyParam?: string) => {
     try {
-      const apiKey = await ensurePlaygroundApiKey();
+      const apiKey = apiKeyParam || await ensurePlaygroundApiKey();
       const res = await fetch(`${gatewayBase}/v1/models`, {
         method: 'GET',
         headers: {
@@ -248,6 +281,29 @@ export default function Playground() {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-semibold text-white">{t('playground.title')}</h1>
         <div className="flex items-center gap-4">
+          <select
+            value={selectedApiKeyId}
+            onChange={(e) => {
+              const id = e.target.value;
+              setSelectedApiKeyId(id);
+              localStorage.setItem('playground_api_key_id', id);
+              const k = apiKeys.find(x => x.id === id);
+              if (k?.key) {
+                localStorage.setItem('playground_api_key', k.key);
+                fetchModels(k.key);
+              } else {
+                localStorage.removeItem('playground_api_key');
+              }
+            }}
+            className="block w-56 rounded-md border-0 bg-gray-800 py-1.5 text-white shadow-sm ring-1 ring-inset ring-gray-700 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+          >
+            <option value="" disabled>{t('playground.select_api_key')}</option>
+            {apiKeys.map((k) => (
+              <option key={k.id} value={k.id}>
+                {k.label} ({k.key_prefix})
+              </option>
+            ))}
+          </select>
           <select
             value={selectedModel}
             onChange={(e) => setSelectedModel(e.target.value)}
