@@ -9,6 +9,15 @@ interface Model {
   name: string;
 }
 
+interface ApiKey {
+  id: string;
+  label: string;
+  is_active: boolean;
+  key?: string;
+  key_prefix: string;
+  created_at: string;
+}
+
 interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
@@ -33,12 +42,46 @@ export default function Playground() {
     scrollToBottom();
   }, [messages, streaming]);
 
+  const gatewayBase = (() => {
+    const raw = (import.meta.env.VITE_API_BASE_URL || 'https://api.t-router.com').toString().replace(/\/+$/, '');
+    return raw.replace(/\/(api|v1)$/, '');
+  })();
+
+  const ensurePlaygroundApiKey = async (): Promise<string> => {
+    const cached = localStorage.getItem('playground_api_key');
+    if (cached) return cached;
+
+    const res = await api.get<ApiKey[]>('/keys');
+    const existing = res.data.find(k => k.is_active && k.key)?.key;
+    if (existing) {
+      localStorage.setItem('playground_api_key', existing);
+      return existing;
+    }
+
+    const created = await api.post<{ key: string }>('/keys', { label: 'Playground' });
+    localStorage.setItem('playground_api_key', created.data.key);
+    return created.data.key;
+  };
+
   const fetchModels = async () => {
     try {
-      const res = await api.get<Model[]>('/models/available');
-      setModels(res.data);
-      if (res.data.length > 0) {
-        setSelectedModel(res.data[0].id);
+      const apiKey = await ensurePlaygroundApiKey();
+      const res = await fetch(`${gatewayBase}/v1/models`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+      }
+
+      const ids: string[] = await res.json();
+      const list = ids.map(id => ({ id, name: id }));
+      setModels(list);
+      if (list.length > 0) {
+        setSelectedModel(list[0].id);
       }
     } catch (error) {
       console.error('Failed to fetch models:', error);
@@ -69,15 +112,11 @@ export default function Playground() {
       const assistantMessage: Message = { role: 'assistant', content: '' };
       setMessages([...newMessages, assistantMessage]);
 
-      const baseURL = (api.defaults.baseURL || '/api').toString().replace(/\/+$/, '');
-      const endpoint = `${baseURL}/chat/completions`;
-
-      const requestInit: RequestInit = {
+      const requestInitBase: RequestInit = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'text/event-stream',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({
           model: selectedModel,
@@ -86,27 +125,23 @@ export default function Playground() {
         }),
       };
 
-      let response: Response;
-      let usedEndpoint = endpoint;
-      try {
-        response = await fetch(endpoint, requestInit);
-      } catch (e) {
-        const fetchMsg = e instanceof Error ? e.message : String(e);
-        const canFallback = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-        const fallbackEndpoint = '/api/chat/completions';
-        if (canFallback && endpoint !== fallbackEndpoint) {
-          try {
-            response = await fetch(fallbackEndpoint, requestInit);
-            usedEndpoint = fallbackEndpoint;
-          } catch (e2) {
-            const msg1 = e instanceof Error ? e.message : String(e);
-            const msg2 = e2 instanceof Error ? e2.message : String(e2);
-            throw new Error(`Failed to fetch (${endpoint}); fallback (${fallbackEndpoint}): ${msg2 || msg1}`);
-          }
-        } else {
-          throw new Error(`Failed to fetch (${endpoint}): ${fetchMsg}`);
-        }
-      }
+      let usedEndpoint = '';
+
+      const v1Endpoint = `${gatewayBase}/v1/chat/completions`;
+
+      const tryFetch = async (endpoint: string, authToken: string): Promise<Response> => {
+        return fetch(endpoint, {
+          ...requestInitBase,
+          headers: {
+            ...(requestInitBase.headers || {}),
+            Authorization: `Bearer ${authToken}`,
+          },
+        });
+      };
+
+      const apiKey = await ensurePlaygroundApiKey();
+      usedEndpoint = v1Endpoint;
+      const response = await tryFetch(v1Endpoint, apiKey);
 
       if (!response.ok) {
         const requestId = response.headers.get('X-Request-ID');
