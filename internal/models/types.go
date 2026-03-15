@@ -19,8 +19,8 @@ type StreamOptions struct {
 }
 
 type Message struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role    string      `json:"role"`
+	Content interface{} `json:"content"`
 }
 
 // ChatCompletionResponse represents the standard non-streaming response
@@ -63,9 +63,9 @@ type StreamChoice struct {
 }
 
 type MessageDelta struct {
-	Role             string `json:"role,omitempty"`
-	Content          string `json:"content,omitempty"`
-	ReasoningContent string `json:"reasoning_content,omitempty"`
+	Role             string      `json:"role,omitempty"`
+	Content          interface{} `json:"content,omitempty"`
+	ReasoningContent string      `json:"reasoning_content,omitempty"`
 }
 
 // --- Auth & User Models ---

@@ -25,6 +25,7 @@ func ChatCompletionHandler(c *gin.Context) {
 
 	var req models.ChatCompletionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("Failed to bind JSON for request %s: %v", requestID, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -200,7 +201,11 @@ func attemptNormalResponse(c *gin.Context, p provider.Provider, route *models.Mo
 		promptTokens = estimateTokensFromMessages(req.Messages)
 	}
 	if completionTokens == 0 && len(resp.Choices) > 0 {
-		completionTokens = estimateTokens(resp.Choices[0].Message.Content)
+		if text, ok := resp.Choices[0].Message.Content.(string); ok {
+			completionTokens = estimateTokens(text)
+		} else {
+			completionTokens = estimateTokens(fmt.Sprintf("%v", resp.Choices[0].Message.Content))
+		}
 	}
 
 	processBillingAndAudit(userID, requestID, req.Model, route, promptTokens, completionTokens, startTime, c.ClientIP())
@@ -250,7 +255,11 @@ func attemptStreamResponse(c *gin.Context, p provider.Provider, route *models.Mo
 		
 		// Capture first chunk content
 		if len(firstChunk.Choices) > 0 {
-			completionBuilder.WriteString(firstChunk.Choices[0].Delta.Content)
+			if content, ok := firstChunk.Choices[0].Delta.Content.(string); ok {
+				completionBuilder.WriteString(content)
+			} else if firstChunk.Choices[0].Delta.Content != nil {
+				completionBuilder.WriteString(fmt.Sprintf("%v", firstChunk.Choices[0].Delta.Content))
+			}
 			completionBuilder.WriteString(firstChunk.Choices[0].Delta.ReasoningContent)
 		}
 
@@ -265,7 +274,11 @@ func attemptStreamResponse(c *gin.Context, p provider.Provider, route *models.Mo
 				
 				// Accumulate content
 				if len(chunk.Choices) > 0 {
-					completionBuilder.WriteString(chunk.Choices[0].Delta.Content)
+					if content, ok := chunk.Choices[0].Delta.Content.(string); ok {
+						completionBuilder.WriteString(content)
+					} else if chunk.Choices[0].Delta.Content != nil {
+						completionBuilder.WriteString(fmt.Sprintf("%v", chunk.Choices[0].Delta.Content))
+					}
 					completionBuilder.WriteString(chunk.Choices[0].Delta.ReasoningContent)
 				}
 				
@@ -396,7 +409,12 @@ func estimateTokens(text string) int {
 func estimateTokensFromMessages(messages []models.Message) int {
 	count := 0
 	for _, msg := range messages {
-		count += estimateTokens(msg.Content)
+		if text, ok := msg.Content.(string); ok {
+			count += estimateTokens(text)
+		} else {
+			// For non-string content (multimodal), we can just estimate based on string representation
+			count += estimateTokens(fmt.Sprintf("%v", msg.Content))
+		}
 	}
 	return count
 }
