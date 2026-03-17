@@ -71,7 +71,8 @@
     "code_sent": "Code Sent",
     "code_send_failed": "Failed to send code",
     "invalid_phone": "Invalid phone number",
-    "invalid_code": "Verification code is required"
+    "invalid_code": "Verification code is required",
+    "invitation_code": "Invitation Code (Required)"
   },
   "dashboard": {
     "current_balance": "Current Balance",
@@ -127,6 +128,12 @@
     "models_providers_desc": "Configure AI models, manage upstream providers and routing.",
     "transactions": "Transactions",
     "transactions_desc": "View all financial records, recharges, and usage deductions.",
+    "invitation_codes": "Invitation Codes",
+    "invitation_codes_desc": "Generate and manage invitation codes for user registration.",
+    "no_invitation_codes": "No invitation codes found",
+    "create_invitation": "Generate Invitation Code",
+    "confirm_delete_invitation": "Are you sure you want to delete this invitation code?",
+    "no_remark": "No remark",
     "total_users": "Total Users",
     "search_users": "Search users...",
     "email_phone": "Email / Phone",
@@ -214,10 +221,9 @@
     "config_fetch_failed": "Failed to fetch configurations",
     "config_keys": {
       "new_user_gift_amount": "New User Gift Amount",
+      "registration_enabled": "Registration Enabled Toggle",
+      "invitation_codes": "Invitation Codes (Comma separated)",
       "default_model_preference": "Default Model Preference",
-      "min_recharge_amount": "Min Recharge Amount",
-      "max_recharge_amount": "Max Recharge Amount",
-      "enable_registration": "Enable Registration",
       "enable_email_verification": "Enable Email Verification",
       "enable_phone_verification": "Enable Phone Verification",
       "site_name": "Site Name",

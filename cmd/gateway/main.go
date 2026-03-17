@@ -133,6 +133,11 @@ func main() {
 			admin.POST("/users/recharge", api.AdminRechargeUserHandler)
 			admin.GET("/transactions", api.AdminGetTransactionsHandler)
 
+			// Invitation Code Management
+			admin.GET("/invitation-codes", api.AdminListInvitationCodesHandler)
+			admin.POST("/invitation-codes", api.AdminCreateInvitationCodeHandler)
+			admin.DELETE("/invitation-codes/:id", api.AdminDeleteInvitationCodeHandler)
+
 			// Provider & Model Management (Write Access)
 			admin.POST("/providers", api.CreateProviderHandler)
 			admin.DELETE("/providers/:id", api.DeleteProviderHandler)

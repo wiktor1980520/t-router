@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 	"trouter/internal/config"
 	"trouter/internal/models"
@@ -90,6 +91,42 @@ func RegisterHandler(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	// 1. Check if registration is enabled
+	var regEnabledConfig models.SystemConfig
+	if err := config.DB.Where("key = ?", "registration_enabled").First(&regEnabledConfig).Error; err == nil {
+		if regEnabledConfig.Value == "false" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Registration is currently disabled by administrator"})
+			return
+		}
+	}
+
+	// 2. Check invitation code if required
+	var invCodesConfig models.SystemConfig
+	if err := config.DB.Where("key = ?", "invitation_codes").First(&invCodesConfig).Error; err == nil {
+		if invCodesConfig.Value != "" {
+			// Check DB invitation codes first
+			var dbCode models.InvitationCode
+			// Use case-insensitive check for the code
+			err := config.DB.Where("UPPER(code) = ?", strings.ToUpper(req.InvitationCode)).First(&dbCode).Error
+			
+			if err != nil {
+				// Fallback to legacy config-based codes if not found in DB
+				validCodes := strings.Split(invCodesConfig.Value, ",")
+				isValid := false
+				for _, code := range validCodes {
+					if strings.ToUpper(req.InvitationCode) == strings.ToUpper(strings.TrimSpace(code)) {
+						isValid = true
+						break
+					}
+				}
+				if !isValid {
+					c.JSON(http.StatusForbidden, gin.H{"error": "Invalid invitation code"})
+					return
+				}
+			}
+		}
 	}
 
 	// Verify Turnstile

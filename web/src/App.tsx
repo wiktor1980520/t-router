@@ -15,6 +15,7 @@ import AdminUserDetail from './pages/admin/UserDetail';
 import AdminModels from './pages/admin/Models';
 import AdminTransactions from './pages/admin/Transactions';
 import AdminSystemConfig from './pages/admin/SystemConfig';
+import AdminInvitationCodes from './pages/admin/InvitationCodes';
 import Layout from './components/Layout';
 
 const ProtectedRoute = ({ children }: { children: ReactElement }) => {
@@ -72,6 +73,7 @@ function App() {
             <Route path="users/:id" element={<AdminUserDetail />} />
             <Route path="models" element={<AdminModels />} />
             <Route path="transactions" element={<AdminTransactions />} />
+            <Route path="invitation-codes" element={<AdminInvitationCodes />} />
             <Route path="config" element={<AdminSystemConfig />} />
           </Route>
 

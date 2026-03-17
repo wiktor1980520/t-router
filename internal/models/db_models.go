@@ -35,6 +35,14 @@ type VerificationCode struct {
 	CreatedAt time.Time
 }
 
+type InvitationCode struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	Code      string    `gorm:"size:20;uniqueIndex;not null" json:"code"`
+	Remark    string    `json:"remark"`
+	CreatedBy string    `gorm:"size:36" json:"created_by"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
 	if u.ID == "" {
 		u.ID = uuid.New().String()

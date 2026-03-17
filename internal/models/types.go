@@ -81,6 +81,7 @@ type RegisterRequest struct {
 	Password         string `json:"password" binding:"required,min=6"`
 	Phone            string `json:"phone" binding:"required"`
 	VerificationCode string `json:"verification_code" binding:"required"`
+	InvitationCode   string `json:"invitation_code"`
 	TurnstileToken   string `json:"turnstile_token"`
 }
 

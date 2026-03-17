@@ -19,6 +19,8 @@ type SystemConfig struct {
 func SeedSystemConfigs(db *gorm.DB) {
 	configs := []SystemConfig{
 		{Key: "new_user_gift_amount", Value: "1.0", Description: "Initial balance gifted to new users"},
+		{Key: "registration_enabled", Value: "true", Description: "Enable/disable new user registration"},
+		{Key: "invitation_codes", Value: "TRouter-Welcome,OpenAI-666", Description: "Comma-separated valid invitation codes (empty means no check)"},
 	}
 
 	for _, config := range configs {

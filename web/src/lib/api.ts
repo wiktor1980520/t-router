@@ -4,9 +4,7 @@ declare const __API_BASE_URL__: string | undefined;
 
 const inferApiBase = (): string | undefined => {
   if (typeof window === 'undefined') return undefined;
-  const host = window.location.hostname;
-  if (host === 'localhost' || host === '127.0.0.1') return undefined;
-  return 'https://api.t-router.com';
+  return undefined;
 };
 
 const API_BASE =
