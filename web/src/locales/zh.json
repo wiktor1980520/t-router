@@ -392,6 +392,15 @@
       "panel_item3_title": "可观测与运营",
       "panel_item3_desc": "request_id、审计日志、经营总览与邀请码渠道统计。"
     },
+    "support": {
+      "title": "已支持/可接入的供应商与模型",
+      "desc": "一个 OpenAI-compatible API，对接多家供应商；统一计费、风控与运营能力。",
+      "providers_title": "供应商",
+      "models_title": "重点模型",
+      "providers": "Anthropic|Google Gemini|OpenAI|DeepSeek|Kimi|MiniMax",
+      "models": "Gemini 3 Pro|GPT 5.2|Claude 4.5|DeepSeek V3.2|Kimi K2.5|MiniMax M2.7",
+      "note": "模型展示名称可配置（统一模型 ID）。实际可用列表取决于你的供应商 Key 与模型配置。"
+    },
     "features": {
       "title": "为运营而生",
       "desc": "用更少的系统拼装成本，获得可控、可计费、可观测的 AI 使用链路。",

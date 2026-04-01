@@ -10,6 +10,22 @@ export default function LandingPage() {
 
   const primaryHref = token ? '/dashboard' : '/login';
 
+  const providers = useMemo(() => {
+    const raw = t('landing.support.providers');
+    return raw
+      .split('|')
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }, [t]);
+
+  const models = useMemo(() => {
+    const raw = t('landing.support.models');
+    return raw
+      .split('|')
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }, [t]);
+
   const features = useMemo(
     () => [
       { icon: Zap, title: t('landing.features.fast_title'), desc: t('landing.features.fast_desc') },
@@ -139,6 +155,46 @@ export default function LandingPage() {
                 <div className="rounded-xl border border-gray-800 bg-gray-950/60 p-4">
                   <div className="text-white font-semibold">{t('landing.hero.panel_item3_title')}</div>
                   <div className="mt-2 text-sm text-gray-400">{t('landing.hero.panel_item3_desc')}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-6 py-10">
+          <div className="rounded-3xl border border-gray-800 bg-gray-900/30 p-8">
+            <div className="flex flex-col lg:flex-row gap-10">
+              <div className="flex-1">
+                <h2 className="text-2xl font-semibold text-white">{t('landing.support.title')}</h2>
+                <p className="mt-2 text-gray-400">{t('landing.support.desc')}</p>
+              </div>
+              <div className="flex-[1.2] space-y-6">
+                <div>
+                  <div className="text-sm text-gray-400">{t('landing.support.providers_title')}</div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {providers.map((p) => (
+                      <span
+                        key={p}
+                        className="inline-flex items-center rounded-full border border-gray-800 bg-gray-950/60 px-3 py-1 text-sm text-gray-200"
+                      >
+                        {p}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-400">{t('landing.support.models_title')}</div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {models.map((m) => (
+                      <span
+                        key={m}
+                        className="inline-flex items-center rounded-full border border-gray-800 bg-gray-950/60 px-3 py-1 text-sm text-gray-200"
+                      >
+                        {m}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="mt-3 text-xs text-gray-500">{t('landing.support.note')}</div>
                 </div>
               </div>
             </div>

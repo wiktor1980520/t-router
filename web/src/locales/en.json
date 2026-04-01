@@ -392,6 +392,15 @@
       "panel_item3_title": "Operational visibility",
       "panel_item3_desc": "Request IDs, audit logs, metrics overview, and invitation channel analytics."
     },
+    "support": {
+      "title": "Providers and models you can run",
+      "desc": "Route multiple providers behind one OpenAI-compatible API, with unified billing and governance.",
+      "providers_title": "Providers",
+      "models_title": "Highlighted models",
+      "providers": "Anthropic|Google Gemini|OpenAI|DeepSeek|Kimi|MiniMax",
+      "models": "Gemini 3 Pro|GPT 5.2|Claude 4.5|DeepSeek V3.2|Kimi K2.5|MiniMax M2.7",
+      "note": "Model naming is configurable (unified model IDs). What appears depends on your provider keys and model catalog."
+    },
     "features": {
       "title": "Built for operations",
       "desc": "A pragmatic stack for charging, controlling and observing AI usage.",
