@@ -10,6 +10,7 @@ import Billing from './pages/Billing';
 import Team from './pages/Team';
 import Settings from './pages/Settings';
 import Playground from './pages/Playground';
+import LandingPage from './pages/Landing';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUsers from './pages/admin/Users';
 import AdminUserDetail from './pages/admin/UserDetail';
@@ -76,8 +77,8 @@ function App() {
             <Route path="config" element={<AdminSystemConfig />} />
           </Route>
 
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<LandingPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     </AuthProvider>

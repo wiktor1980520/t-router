@@ -366,6 +366,90 @@
     "subscription_remaining": "包月额度剩余",
     "subscription_expires": "到期时间"
   },
+  "landing": {
+    "header": {
+      "subtitle": "统一网关与计费运营",
+      "features": "特性",
+      "pricing": "价格",
+      "faq": "常见问题",
+      "login": "登录",
+      "register": "注册",
+      "console": "进入控制台"
+    },
+    "hero": {
+      "title": "把路由、计费、风控与观测，放在一个入口完成。",
+      "desc": "TRouter 是 OpenAI-compatible 的统一网关：聚合多供应商、统一模型、自动计费（按量+包月）、团队预算、审计日志与经营看板，面向生产运营落地。",
+      "primary": "开始使用",
+      "secondary": "查看价格",
+      "badge1": "OpenAI-compatible API",
+      "badge2": "准确计费与审计",
+      "badge3": "团队与预算控制",
+      "panel_kicker": "你会得到",
+      "panel_item1_title": "多供应商路由",
+      "panel_item1_desc": "按成本/延迟偏好路由，同一模型 ID 对外暴露。",
+      "panel_item2_title": "商业化内置",
+      "panel_item2_desc": "按量+包月、充值订单、交易记录与后台管理。",
+      "panel_item3_title": "可观测与运营",
+      "panel_item3_desc": "request_id、审计日志、经营总览与邀请码渠道统计。"
+    },
+    "features": {
+      "title": "为运营而生",
+      "desc": "用更少的系统拼装成本，获得可控、可计费、可观测的 AI 使用链路。",
+      "fast_title": "稳定网关",
+      "fast_desc": "请求 ID 透传、错误归一化与 OpenAI 接口兼容。",
+      "billing_title": "真实计费",
+      "billing_desc": "消费记账幂等、余额保护；包月额度优先扣减，超额自动转按量。",
+      "security_title": "安全基线",
+      "security_desc": "API Key 哈希存储、限流、禁用策略与管理员种子更安全。",
+      "analytics_title": "经营看板",
+      "analytics_desc": "总览卡片、模型排行、毛利/毛利率、邀请码渠道表现。",
+      "team_title": "团队与预算",
+      "team_desc": "组织维度预算上限、API Key 归属团队、审计导出。"
+    },
+    "pricing": {
+      "title": "简单定价",
+      "desc": "按量起步，业务稳定后再升级包月与团队控制。",
+      "cta": "立即开始",
+      "payg_name": "按量计费",
+      "payg_price": "按用量",
+      "payg_tagline": "适合开发者与早期产品。",
+      "payg_i1": "统一模型与路由",
+      "payg_i2": "余额扣费记账",
+      "payg_i3": "用量与交易记录",
+      "sub_name": "包月卡",
+      "sub_price": "月度额度",
+      "sub_tagline": "在指定模型范围内获得更可预测成本。",
+      "sub_i1": "套餐额度与模型范围",
+      "sub_i2": "超额自动转按量",
+      "sub_i3": "套餐级 RPM",
+      "team_name": "团队/企业",
+      "team_price": "预算控制",
+      "team_tagline": "适合需要预算治理与审计的团队。",
+      "team_i1": "组织与角色",
+      "team_i2": "月度预算上限",
+      "team_i3": "审计 CSV 导出"
+    },
+    "faq": {
+      "title": "常见问题",
+      "desc": "上线与运营 TRouter 时经常会问到的几个点。",
+      "q1": "是否兼容 OpenAI 接口？",
+      "a1": "是的，支持 OpenAI 风格的接口，并可在网关后统一路由多家供应商。",
+      "q2": "包月卡怎么扣费？",
+      "a2": "在套餐覆盖的模型范围内优先扣减包月额度；额度不足时，剩余部分自动按量扣费。",
+      "q3": "能否按团队限制预算？",
+      "a3": "可以。API Key 可绑定团队组织，并按月累计支出；超过月度预算后会拒绝新的请求，同时支持审计导出。"
+    },
+    "cta": {
+      "title": "准备好上线可运营的 AI 网关了吗？",
+      "desc": "从按量开始，逐步启用包月与团队治理能力。",
+      "button": "进入控制台"
+    },
+    "footer": {
+      "company": "卓然信息技术（深圳）有限公司",
+      "login": "登录",
+      "register": "注册"
+    }
+  },
   "team": {
     "title": "团队空间",
     "desc": "创建团队，管理成员与团队预算，并导出审计日志。",

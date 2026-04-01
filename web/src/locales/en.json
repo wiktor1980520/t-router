@@ -366,6 +366,90 @@
     "subscription_remaining": "Subscription remaining",
     "subscription_expires": "Expires at"
   },
+  "landing": {
+    "header": {
+      "subtitle": "Unified AI gateway & billing",
+      "features": "Features",
+      "pricing": "Pricing",
+      "faq": "FAQ",
+      "login": "Sign in",
+      "register": "Create account",
+      "console": "Open console"
+    },
+    "hero": {
+      "title": "Route, bill, and observe your AI traffic in one place.",
+      "desc": "TRouter is an OpenAI-compatible gateway that unifies providers, pricing, subscriptions, teams, budgets, audit logs and admin analytics — built for production operations.",
+      "primary": "Get started",
+      "secondary": "View pricing",
+      "badge1": "OpenAI-compatible API",
+      "badge2": "Accurate billing & audit",
+      "badge3": "Teams & budgets",
+      "panel_kicker": "What you get",
+      "panel_item1_title": "Multi-provider routing",
+      "panel_item1_desc": "Route requests by cost/latency preference with unified model IDs.",
+      "panel_item2_title": "Commercialization built-in",
+      "panel_item2_desc": "PAYG + subscriptions, usage records, recharge orders, and admin tools.",
+      "panel_item3_title": "Operational visibility",
+      "panel_item3_desc": "Request IDs, audit logs, metrics overview, and invitation channel analytics."
+    },
+    "features": {
+      "title": "Built for operations",
+      "desc": "A pragmatic stack for charging, controlling and observing AI usage.",
+      "fast_title": "Stable gateway",
+      "fast_desc": "OpenAI-compatible endpoints with request-id propagation and provider error normalization.",
+      "billing_title": "Billing that matches reality",
+      "billing_desc": "Consumption records, idempotent charging, balance protection, and subscriptions with quota fallback.",
+      "security_title": "Security baseline",
+      "security_desc": "Hashed API keys, rate limit, disabled-account enforcement, and safer admin seeding.",
+      "analytics_title": "Admin analytics",
+      "analytics_desc": "Overview cards, model ranking, profit/margin, and invitation channel performance.",
+      "team_title": "Teams & budgets",
+      "team_desc": "Organizations with monthly budget guardrails, shared audit export, and API key attribution."
+    },
+    "pricing": {
+      "title": "Simple pricing",
+      "desc": "Start with pay-as-you-go and upgrade when you need predictability.",
+      "cta": "Start now",
+      "payg_name": "Pay as you go",
+      "payg_price": "Usage-based",
+      "payg_tagline": "Best for developers and early-stage products.",
+      "payg_i1": "Unified models & routing",
+      "payg_i2": "Balance-based billing",
+      "payg_i3": "Usage and transaction history",
+      "sub_name": "Subscription",
+      "sub_price": "Monthly quota",
+      "sub_tagline": "Predictable spend for supported models.",
+      "sub_i1": "Plan-defined quota & models",
+      "sub_i2": "Overage falls back to PAYG",
+      "sub_i3": "Plan-level RPM",
+      "team_name": "Team / Enterprise",
+      "team_price": "Budget control",
+      "team_tagline": "Budget governance and audit exports.",
+      "team_i1": "Organizations & roles",
+      "team_i2": "Monthly budgets by org",
+      "team_i3": "Audit CSV export"
+    },
+    "faq": {
+      "title": "FAQ",
+      "desc": "Common questions when rolling out TRouter.",
+      "q1": "Is it OpenAI-compatible?",
+      "a1": "Yes. It supports OpenAI-style endpoints and lets you route to multiple providers behind a unified API.",
+      "q2": "How does subscription billing work?",
+      "a2": "If the model is covered by your plan, quota is deducted first. If quota is insufficient, the remainder falls back to PAYG charging.",
+      "q3": "Can we limit spending by team?",
+      "a3": "Yes. You can attach API keys to an organization and enforce a monthly budget limit with audit exports."
+    },
+    "cta": {
+      "title": "Ready to ship a production AI gateway?",
+      "desc": "Start with a developer account, then move to subscriptions and teams when needed.",
+      "button": "Open console"
+    },
+    "footer": {
+      "company": "Zhuoran Information Technology (Shenzhen) Co., Ltd.",
+      "login": "Sign in",
+      "register": "Create account"
+    }
+  },
   "team": {
     "title": "Team",
     "desc": "Create organizations, manage budget, and export audit logs.",
