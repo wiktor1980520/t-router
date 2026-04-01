@@ -4,10 +4,156 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>T-TOUTER.COM Token Gather Platform</title>
+    <title>TRouter - Unified AI Gateway, Billing, Teams, Analytics</title>
+    <meta
+      name="description"
+      content="TRouter is an OpenAI-compatible AI gateway for routing, billing (PAYG + subscriptions), teams & budgets, audit logs and admin analytics. TRouter 是 OpenAI-compatible 的统一网关：路由、计费（按量+包月）、团队预算、审计与经营看板。"
+    />
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href="https://t-router.com/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="TRouter - Unified AI Gateway, Billing, Teams, Analytics" />
+    <meta
+      property="og:description"
+      content="Route, bill, and observe your AI traffic in one place. OpenAI-compatible gateway with subscriptions, budgets, audit logs and admin analytics."
+    />
+    <meta property="og:url" content="https://t-router.com/" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="TRouter - Unified AI Gateway" />
+    <meta
+      name="twitter:description"
+      content="OpenAI-compatible gateway with billing, subscriptions, teams & budgets, audit logs and analytics."
+    />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "name": "TRouter",
+            "url": "https://t-router.com/"
+          },
+          {
+            "@type": "SoftwareApplication",
+            "name": "TRouter",
+            "applicationCategory": "DeveloperApplication",
+            "operatingSystem": "Web",
+            "url": "https://t-router.com/",
+            "description": "OpenAI-compatible AI gateway with routing, billing, subscriptions, teams & budgets, audit logs and admin analytics."
+          },
+          {
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "Is it OpenAI-compatible?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. It supports OpenAI-style endpoints and routes to multiple providers behind a unified API."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "How does subscription billing work?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "If the model is covered by your plan, quota is deducted first. If quota is insufficient, the remainder falls back to pay-as-you-go."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Can we limit spending by team?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. Attach API keys to an organization and enforce a monthly budget limit with audit exports."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+
+    <script>
+      (function () {
+        try {
+          if (location.pathname !== '/' && location.pathname !== '') {
+            var root = document.getElementById('root');
+            if (root) root.innerHTML = '';
+          }
+        } catch {}
+      })();
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="min-h-screen bg-gray-950 text-gray-100">
+        <header class="border-b border-gray-800/60 bg-gray-950/70">
+          <div class="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="h-9 w-9 rounded-xl bg-blue-600 flex items-center justify-center font-bold">T</div>
+              <div>
+                <div class="text-white font-semibold leading-tight">TRouter</div>
+                <div class="text-xs text-gray-400">Unified AI gateway & billing</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <a href="/register" class="hidden sm:inline-flex px-4 py-2 rounded-lg border border-gray-800 text-gray-200">Create account</a>
+              <a href="/login" class="inline-flex px-4 py-2 rounded-lg bg-blue-600 text-white">Sign in</a>
+            </div>
+          </div>
+        </header>
+
+        <main class="mx-auto max-w-7xl px-6 pt-16 pb-16 space-y-12">
+          <section class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+            <div>
+              <h1 class="text-4xl sm:text-5xl font-bold tracking-tight text-white">Route, bill, and observe your AI traffic in one place.</h1>
+              <p class="mt-5 text-lg text-gray-300 leading-relaxed">
+                TRouter is an OpenAI-compatible AI gateway with routing, billing (PAYG + subscriptions), teams & budgets, audit logs and admin analytics.
+              </p>
+              <div class="mt-8 flex flex-col sm:flex-row gap-3">
+                <a href="/login" class="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-blue-600 text-white font-medium">Get started</a>
+                <a href="#pricing" class="inline-flex items-center justify-center px-5 py-3 rounded-xl border border-gray-800 text-gray-200 font-medium">View pricing</a>
+              </div>
+              <div class="mt-6 flex flex-wrap gap-3 text-sm text-gray-400">
+                <span>OpenAI-compatible API</span>
+                <span>Accurate billing & audit</span>
+                <span>Teams & budgets</span>
+              </div>
+            </div>
+            <div class="rounded-2xl border border-gray-800 bg-gray-900/40 p-6">
+              <div class="text-sm text-gray-400">Providers</div>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <span class="inline-flex items-center rounded-full border border-gray-800 bg-gray-950/60 px-3 py-1 text-sm text-gray-200">Anthropic</span>
+                <span class="inline-flex items-center rounded-full border border-gray-800 bg-gray-950/60 px-3 py-1 text-sm text-gray-200">Google Gemini</span>
+                <span class="inline-flex items-center rounded-full border border-gray-800 bg-gray-950/60 px-3 py-1 text-sm text-gray-200">OpenAI</span>
+                <span class="inline-flex items-center rounded-full border border-gray-800 bg-gray-950/60 px-3 py-1 text-sm text-gray-200">DeepSeek</span>
+                <span class="inline-flex items-center rounded-full border border-gray-800 bg-gray-950/60 px-3 py-1 text-sm text-gray-200">Kimi</span>
+                <span class="inline-flex items-center rounded-full border border-gray-800 bg-gray-950/60 px-3 py-1 text-sm text-gray-200">MiniMax</span>
+              </div>
+              <div class="mt-6 text-sm text-gray-400">Highlighted models</div>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <span class="inline-flex items-center rounded-full border border-gray-800 bg-gray-950/60 px-3 py-1 text-sm text-gray-200">Gemini 3 Pro</span>
+                <span class="inline-flex items-center rounded-full border border-gray-800 bg-gray-950/60 px-3 py-1 text-sm text-gray-200">GPT 5.2</span>
+                <span class="inline-flex items-center rounded-full border border-gray-800 bg-gray-950/60 px-3 py-1 text-sm text-gray-200">Claude 4.5</span>
+                <span class="inline-flex items-center rounded-full border border-gray-800 bg-gray-950/60 px-3 py-1 text-sm text-gray-200">DeepSeek V3.2</span>
+                <span class="inline-flex items-center rounded-full border border-gray-800 bg-gray-950/60 px-3 py-1 text-sm text-gray-200">Kimi K2.5</span>
+                <span class="inline-flex items-center rounded-full border border-gray-800 bg-gray-950/60 px-3 py-1 text-sm text-gray-200">MiniMax M2.7</span>
+              </div>
+              <div class="mt-3 text-xs text-gray-500">This list is configurable via unified model IDs and provider settings.</div>
+            </div>
+          </section>
+
+          <section id="pricing" class="rounded-2xl border border-gray-800 bg-gray-900/30 p-6">
+            <div class="text-white font-semibold">Pricing</div>
+            <div class="mt-2 text-sm text-gray-400">Start with pay-as-you-go, upgrade to subscriptions and teams when you need predictability.</div>
+          </section>
+        </main>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
