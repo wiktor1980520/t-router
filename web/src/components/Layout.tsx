@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Key, CreditCard, LogOut, Settings, Menu, X, Database, ShieldCheck, MessageSquare, Users } from 'lucide-react';
+import { LayoutDashboard, Key, CreditCard, LogOut, Settings, Menu, X, ShieldCheck, MessageSquare, Users } from 'lucide-react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 
@@ -21,7 +21,6 @@ const Layout = () => {
   ];
 
   if (user?.is_admin) {
-    navigation.splice(2, 0, { name: t('nav.models'), href: '/admin/models', icon: Database });
     navigation.push({ name: t('nav.admin'), href: '/admin', icon: ShieldCheck });
   }
 

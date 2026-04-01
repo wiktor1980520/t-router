@@ -46,12 +46,6 @@ const PublicRoute = ({ children }: { children: ReactElement }) => {
   return children;
 };
 
-const AdminModelsAliasRoute = () => {
-  const { user } = useAuth();
-  if (!user?.is_admin) return <Navigate to="/dashboard" replace />;
-  return <Navigate to="/admin/models" replace />;
-};
-
 function App() {
   return (
     <AuthProvider>
@@ -62,7 +56,6 @@ function App() {
           
           <Route path="/dashboard" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<Dashboard />} />
-            <Route path="models" element={<AdminModelsAliasRoute />} />
             <Route path="keys" element={<ApiKeys />} />
             <Route path="playground" element={<Playground />} />
             <Route path="billing" element={<Billing />} />
