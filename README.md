@@ -64,6 +64,10 @@ docs/                  产品、规划、运营、发布文档
 ### 后端
 
 ```bash
+docker compose -f docker-compose.local.yml up -d
+```
+
+```bash
 go run cmd/gateway/main.go
 ```
 
@@ -120,6 +124,8 @@ TRouter 不只是一个模型转发层，更是一套围绕 AI API 使用场景�
 - [版本发布日志与复盘模板.md](file:///d:/TRouter/docs/版本发布日志与复盘模板.md)
 - [商务合作FAQ与标准话术.md](file:///d:/TRouter/docs/商务合作FAQ与标准话术.md)
 - [企业客户PoC与交付流程.md](file:///d:/TRouter/docs/企业客户PoC与交付流程.md)
+- [数据看板页面原型说明.md](file:///d:/TRouter/docs/数据看板页面原型说明.md)
+- [定价与套餐矩阵.md](file:///d:/TRouter/docs/定价与套餐矩阵.md)
 
 ## 推荐对外表达
 
@@ -153,3 +159,9 @@ TRouter 的长期目标，不是做“又一个兼容层”，而是做成一个
 - 看发布复盘：读 [版本发布日志与复盘模板.md](file:///d:/TRouter/docs/版本发布日志与复盘模板.md)
 - 看商务沟通：读 [商务合作FAQ与标准话术.md](file:///d:/TRouter/docs/商务合作FAQ与标准话术.md)
 - 看企业合作交付：读 [企业客户PoC与交付流程.md](file:///d:/TRouter/docs/企业客户PoC与交付流程.md)
+- 看 dashboard 页面设计：读 [数据看板页面原型说明.md](file:///d:/TRouter/docs/数据看板页面原型说明.md)
+- 看价格框架：读 [定价与套餐矩阵.md](file:///d:/TRouter/docs/定价与套餐矩阵.md)
+
+
+
+Create By  卓然信息技术（深圳）有限公司   wiktor1982520@gmail.com

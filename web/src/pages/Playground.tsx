@@ -36,42 +36,89 @@ export default function Playground() {
   const [streaming, setStreaming] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    fetchApiKeys();
-  }, []);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, streaming]);
-
   const gatewayBase = (() => {
     const raw = (import.meta.env.VITE_API_BASE_URL || 'https://api.t-router.com').toString().replace(/\/+$/, '');
     return raw.replace(/\/(api|v1)$/, '');
   })();
 
-  const fetchApiKeys = async () => {
-    try {
-      const res = await api.get<ApiKey[]>('/keys');
-      const usable = res.data.filter(k => k.is_active && k.key);
-      setApiKeys(usable);
+  useEffect(() => {
+    let canceled = false;
+    const init = async () => {
+      const fetchModelsWithKey = async (apiKey: string) => {
+        try {
+          const res = await fetch(`${gatewayBase}/v1/models`, {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+          }
 
-      const cachedId = localStorage.getItem('playground_api_key_id') || '';
-      const defaultKey = (cachedId && usable.find(k => k.id === cachedId)) || usable[0];
-      if (defaultKey) {
-        setSelectedApiKeyId(defaultKey.id);
-        localStorage.setItem('playground_api_key_id', defaultKey.id);
-        localStorage.setItem('playground_api_key', defaultKey.key!);
-        fetchModels(defaultKey.key!);
-      } else {
-        const created = await ensurePlaygroundApiKey();
-        fetchModels(created);
+          const payload: unknown = await res.json();
+          const ids = Array.isArray(payload)
+            ? payload
+            : ((payload as { data?: Array<{ id?: unknown }> })?.data ?? []).map((m) => m?.id);
+          const list = ids
+            .filter((x): x is string => typeof x === 'string' && x.length > 0)
+            .map((id) => ({ id, name: id }));
+          setModels(list);
+          if (list.length > 0) {
+            setSelectedModel(list[0].id);
+          }
+        } catch (error) {
+          console.error('Failed to fetch models:', error);
+        }
+      };
+
+      try {
+        const res = await api.get<ApiKey[]>('/keys');
+        if (canceled) return;
+        const usable = res.data.filter(k => k.is_active && k.key);
+        setApiKeys(usable);
+
+        const cachedId = localStorage.getItem('playground_api_key_id') || '';
+        const defaultKey = (cachedId && usable.find(k => k.id === cachedId)) || usable[0];
+        if (defaultKey?.key) {
+          setSelectedApiKeyId(defaultKey.id);
+          localStorage.setItem('playground_api_key_id', defaultKey.id);
+          localStorage.setItem('playground_api_key', defaultKey.key);
+          fetchModelsWithKey(defaultKey.key);
+          return;
+        }
+
+        const created = await api.post<{ key: string }>('/keys', { label: 'Playground' });
+        if (canceled) return;
+        localStorage.setItem('playground_api_key', created.data.key);
+        fetchModelsWithKey(created.data.key);
+      } catch (error) {
+        console.error('Failed to fetch API keys:', error);
+        try {
+          const created = await api.post<{ key: string }>('/keys', { label: 'Playground' });
+          if (canceled) return;
+          localStorage.setItem('playground_api_key', created.data.key);
+          fetchModelsWithKey(created.data.key);
+        } catch (e) {
+          console.error('Failed to create API key:', e);
+        }
       }
-    } catch (error) {
-      console.error('Failed to fetch API keys:', error);
-      const created = await ensurePlaygroundApiKey();
-      fetchModels(created);
+    };
+    init();
+    return () => {
+      canceled = true;
+    };
+  }, [gatewayBase]);
+
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
     }
-  };
+  }, [messages, streaming]);
 
   const ensurePlaygroundApiKey = async (): Promise<string> => {
     const selected = selectedApiKeyId ? apiKeys.find(k => k.id === selectedApiKeyId) : undefined;
@@ -123,15 +170,6 @@ export default function Playground() {
       }
     } catch (error) {
       console.error('Failed to fetch models:', error);
-    }
-  };
-
-  const scrollToBottom = () => {
-    if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTo({
-        top: messagesContainerRef.current.scrollHeight,
-        behavior: 'smooth'
-      });
     }
   };
 

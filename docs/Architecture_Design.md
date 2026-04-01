@@ -44,7 +44,7 @@ graph TD
     1.  `Recovery`: Panic recovery.
     2.  `CORS`: Cross-origin support.
     3.  `AuthMiddleware`: Validate Bearer Token (JWT/API Key).
-    4.  `RateLimit`: Redis-based sliding window rate limiter.
+    4.  `RateLimit`: Rate limiter (MVP: in-memory per API Key; can be upgraded to Redis sliding window).
     5.  `CostEstimation`: Pre-flight check for user balance.
 
 ### 2.2 Smart Router Engine

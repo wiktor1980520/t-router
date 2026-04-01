@@ -1,19 +1,34 @@
 package config
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"log"
 	"os"
+	"strings"
 
 	"trouter/internal/models"
 
+	"github.com/glebarez/sqlite"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
-	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
 var DB *gorm.DB
+
+func hashApiKeyForStorage(raw string) string {
+	pepper := strings.TrimSpace(os.Getenv("API_KEY_PEPPER"))
+	if pepper == "" {
+		pepper = strings.TrimSpace(os.Getenv("JWT_SECRET"))
+	}
+	if pepper == "" {
+		pepper = "default-secret-key-change-me"
+	}
+	sum := sha256.Sum256([]byte(pepper + ":" + raw))
+	return "sha256:" + hex.EncodeToString(sum[:])
+}
 
 func InitDB() {
 	var err error
@@ -21,7 +36,7 @@ func InitDB() {
 
 	// Check if DATABASE_URL is set for Postgres
 	dsn := os.Getenv("DATABASE_URL")
-	
+
 	if dsn != "" {
 		log.Println("Using PostgreSQL database...")
 		dialector = postgres.Open(dsn)
@@ -41,9 +56,15 @@ func InitDB() {
 	// Auto Migrate Schema
 	log.Println("Migrating database schema...")
 	err = DB.AutoMigrate(
-		&models.User{}, 
-		&models.ApiKey{}, 
+		&models.User{},
+		&models.ApiKey{},
 		&models.Transaction{},
+		&models.PaymentOrder{},
+		&models.SubscriptionPlan{},
+		&models.UserSubscription{},
+		&models.Organization{},
+		&models.OrgMember{},
+		&models.OrgUsage{},
 		&models.Provider{},
 		&models.ModelRoute{},
 		&models.AuditLog{},
@@ -55,7 +76,7 @@ func InitDB() {
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
-	
+
 	// Seed some initial data for testing if empty
 	seedData()
 	// Seed Admin User
@@ -67,27 +88,42 @@ func InitDB() {
 }
 
 func seedAdmin() {
+	adminEmail := os.Getenv("ADMIN_SEED_EMAIL")
+	if adminEmail == "" {
+		adminEmail = "admin@t-router.com"
+	}
+	adminPassword := os.Getenv("ADMIN_SEED_PASSWORD")
+	adminPhone := os.Getenv("ADMIN_SEED_PHONE")
+
 	var admin models.User
 	// Check if admin exists by email
-	err := DB.Where("email = ?", "admin@t-router.com").First(&admin).Error
+	err := DB.Where("email = ?", adminEmail).First(&admin).Error
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
+			if adminPassword == "" {
+				log.Printf("ADMIN_SEED_PASSWORD is empty, skipping admin seed for %s", adminEmail)
+				return
+			}
 			log.Println("Seeding Admin User...")
-			hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("Admin@123"), bcrypt.DefaultCost)
-			phone := "13923708510"
-			
+			hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(adminPassword), bcrypt.DefaultCost)
+
+			var phonePtr *string
+			if adminPhone != "" {
+				phonePtr = &adminPhone
+			}
+
 			admin = models.User{
-				Email:        "admin@t-router.com",
-				Phone:        &phone,
+				Email:        adminEmail,
+				Phone:        phonePtr,
 				PasswordHash: string(hashedPassword),
-				Balance:      1000.00, 
+				Balance:      1000.00,
 				IsActive:     true,
 				IsAdmin:      true,
 			}
 			if err := DB.Create(&admin).Error; err != nil {
 				log.Printf("Failed to create admin user: %v", err)
 			} else {
-				log.Printf("Admin User Created: admin@t-router.com / Admin@123")
+				log.Printf("Admin User Created: %s", adminEmail)
 			}
 		}
 	} else {
@@ -95,7 +131,12 @@ func seedAdmin() {
 		if !admin.IsAdmin {
 			admin.IsAdmin = true
 			DB.Save(&admin)
-			log.Println("Promoted existing user admin@t-router.com to Admin.")
+			log.Printf("Promoted existing user %s to Admin.", adminEmail)
+		}
+		if adminPassword != "" {
+			hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(adminPassword), bcrypt.DefaultCost)
+			admin.PasswordHash = string(hashedPassword)
+			DB.Save(&admin)
 		}
 	}
 }
@@ -105,29 +146,29 @@ func seedData() {
 	DB.Model(&models.User{}).Count(&count)
 	if count == 0 {
 		log.Println("Seeding initial data...")
-		
+
 		// Create a test user
 		// Password is "password123"
 		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 
 		user := models.User{
-			Email:    "test@example.com",
+			Email:        "test@example.com",
 			PasswordHash: string(hashedPassword),
-			Balance:  100.00,
-			IsActive: true,
+			Balance:      100.00,
+			IsActive:     true,
 		}
 		DB.Create(&user)
 
 		// Create a test API Key (sk-test-123456)
 		apiKey := models.ApiKey{
 			UserID:    user.ID,
-			KeyHash:   "sk-test-123456", // Mock hash for simplicity
+			KeyHash:   hashApiKeyForStorage("sk-test-123456"),
 			KeyPrefix: "sk-test",
 			Label:     "Default Key",
 			IsActive:  true,
 		}
 		DB.Create(&apiKey)
-		
-		log.Printf("Seeded User ID: %s, API Key: sk-test-123456, Password: password123", user.ID)
+
+		log.Printf("Seeded test user: %s", user.Email)
 	}
 }

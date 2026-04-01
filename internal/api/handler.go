@@ -16,23 +16,28 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func ChatCompletionHandler(c *gin.Context) {
 	startTime := time.Now()
-	requestID := uuid.New().String()
-	c.Header("X-Request-ID", requestID)
+	requestID := c.GetString("request_id")
+	if requestID == "" {
+		requestID = uuid.New().String()
+		c.Set("request_id", requestID)
+		c.Header("X-Request-ID", requestID)
+	}
 
 	var req models.ChatCompletionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Printf("Failed to bind JSON for request %s: %v", requestID, err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "request_id": requestID})
 		return
 	}
 
 	// Basic validation
 	if len(req.Messages) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "messages array cannot be empty"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "messages array cannot be empty", "request_id": requestID})
 		return
 	}
 
@@ -44,12 +49,12 @@ func ChatCompletionHandler(c *gin.Context) {
 		var apiKeyCount int64
 		if err := config.DB.Model(&models.ApiKey{}).Where("user_id = ? AND is_active = ?", userID, true).Count(&apiKeyCount).Error; err != nil {
 			log.Printf("Error checking API key for user %s: %v", userID, err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error checking permissions"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error checking permissions", "request_id": requestID})
 			return
 		}
 
 		if apiKeyCount == 0 {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Account must have a valid API Key to use this service. Please create one in the dashboard."})
+			c.JSON(http.StatusForbidden, gin.H{"error": "Account must have a valid API Key to use this service. Please create one in the dashboard.", "request_id": requestID})
 			return
 		}
 
@@ -57,16 +62,19 @@ func ChatCompletionHandler(c *gin.Context) {
 		var user models.User
 		if err := config.DB.Select("balance, is_admin").First(&user, "id = ?", userID).Error; err != nil {
 			log.Printf("Error fetching user balance for %s: %v", userID, err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error checking balance"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error checking balance", "request_id": requestID})
 			return
 		}
 
 		if !user.IsAdmin && user.Balance <= 0 {
-			c.JSON(http.StatusPaymentRequired, gin.H{
-				"error": "Insufficient balance. Please recharge to continue using the service.",
-				"balance": user.Balance,
-			})
-			return
+			if !hasUsableSubscription(userID, req.Model) {
+				c.JSON(http.StatusPaymentRequired, gin.H{
+					"error":      "Insufficient balance. Please recharge to continue using the service.",
+					"balance":    user.Balance,
+					"request_id": requestID,
+				})
+				return
+			}
 		}
 	}
 
@@ -91,7 +99,7 @@ func ChatCompletionHandler(c *gin.Context) {
 				}
 			}
 			if !allowed {
-				c.JSON(http.StatusForbidden, gin.H{"error": fmt.Sprintf("Model '%s' is not allowed for this API key", req.Model)})
+				c.JSON(http.StatusForbidden, gin.H{"error": fmt.Sprintf("Model '%s' is not allowed for this API key", req.Model), "request_id": requestID})
 				return
 			}
 		}
@@ -109,7 +117,7 @@ func ChatCompletionHandler(c *gin.Context) {
 				}
 			}
 			if !allowed {
-				c.JSON(http.StatusForbidden, gin.H{"error": fmt.Sprintf("Model '%s' is not allowed for your account", req.Model)})
+				c.JSON(http.StatusForbidden, gin.H{"error": fmt.Sprintf("Model '%s' is not allowed for your account", req.Model), "request_id": requestID})
 				return
 			}
 		}
@@ -120,7 +128,7 @@ func ChatCompletionHandler(c *gin.Context) {
 	routeResults, err := router.GetRouter().Route(req.Model, routingPreference)
 	if err != nil {
 		log.Printf("Routing error for model %s: %v", req.Model, err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Model '%s' not supported or unavailable", req.Model)})
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Model '%s' not supported or unavailable", req.Model), "request_id": requestID})
 		return
 	}
 
@@ -137,10 +145,18 @@ func ChatCompletionHandler(c *gin.Context) {
 
 		if err == nil {
 			log.Printf("Provider %s succeeded for request %s", result.Provider.Name(), requestID)
+			config.DB.Model(&models.ModelRoute{}).Where("id = ?", result.ModelRoute.ID).Updates(map[string]interface{}{
+				"failure_count": 0,
+				"last_check":    time.Now(),
+			})
 			return // Success!
 		}
-		
+
 		lastErr = err
+		config.DB.Model(&models.ModelRoute{}).Where("id = ?", result.ModelRoute.ID).Updates(map[string]interface{}{
+			"failure_count": gorm.Expr("failure_count + 1"),
+			"last_check":    time.Now(),
+		})
 		attempts = append(attempts, gin.H{
 			"route_id":       result.ModelRoute.ID,
 			"provider_id":    result.ModelRoute.ProviderID,
@@ -161,6 +177,7 @@ func ChatCompletionHandler(c *gin.Context) {
 			UserID:     userID,
 			Model:      req.Model,
 			ProviderID: lastRoute.ModelRoute.ProviderID,
+			OrgID:      c.GetString("org_id"),
 			LatencyMS:  time.Since(startTime).Milliseconds(),
 			StatusCode: http.StatusBadGateway,
 			ClientIP:   c.ClientIP(),
@@ -184,7 +201,7 @@ func attemptNormalResponse(c *gin.Context, p provider.Provider, route *models.Mo
 	if err != nil {
 		return err
 	}
-	
+
 	c.JSON(http.StatusOK, resp)
 
 	// Billing & Audit Logic
@@ -195,7 +212,7 @@ func attemptNormalResponse(c *gin.Context, p provider.Provider, route *models.Mo
 
 	promptTokens := resp.Usage.PromptTokens
 	completionTokens := resp.Usage.CompletionTokens
-	
+
 	// Fallback estimation if 0
 	if promptTokens == 0 {
 		promptTokens = estimateTokensFromMessages(req.Messages)
@@ -208,7 +225,7 @@ func attemptNormalResponse(c *gin.Context, p provider.Provider, route *models.Mo
 		}
 	}
 
-	processBillingAndAudit(userID, requestID, req.Model, route, promptTokens, completionTokens, startTime, c.ClientIP())
+	processBillingAndAudit(userID, c.GetString("org_id"), requestID, req.Model, route, promptTokens, completionTokens, startTime, c.ClientIP())
 	return nil
 }
 
@@ -245,14 +262,14 @@ func attemptStreamResponse(c *gin.Context, p provider.Provider, route *models.Mo
 		c.Header("Cache-Control", "no-cache")
 		c.Header("Connection", "keep-alive")
 		c.Header("Transfer-Encoding", "chunked")
-		
+
 		// Send first chunk
 		// Note: SSEvent adds "data:" prefix automatically
 		c.SSEvent("", firstChunk)
 
 		var finalUsage *models.Usage
 		var completionBuilder strings.Builder
-		
+
 		// Capture first chunk content
 		if len(firstChunk.Choices) > 0 {
 			if content, ok := firstChunk.Choices[0].Delta.Content.(string); ok {
@@ -271,7 +288,7 @@ func attemptStreamResponse(c *gin.Context, p provider.Provider, route *models.Mo
 					c.Writer.WriteString("data: [DONE]\n\n")
 					return false
 				}
-				
+
 				// Accumulate content
 				if len(chunk.Choices) > 0 {
 					if content, ok := chunk.Choices[0].Delta.Content.(string); ok {
@@ -281,7 +298,7 @@ func attemptStreamResponse(c *gin.Context, p provider.Provider, route *models.Mo
 					}
 					completionBuilder.WriteString(chunk.Choices[0].Delta.ReasoningContent)
 				}
-				
+
 				if chunk.Usage != nil {
 					finalUsage = chunk.Usage
 				}
@@ -315,9 +332,9 @@ func attemptStreamResponse(c *gin.Context, p provider.Provider, route *models.Mo
 				promptTokens = estimateTokensFromMessages(req.Messages)
 				completionTokens = estimateTokens(completionBuilder.String())
 			}
-			processBillingAndAudit(userID, requestID, req.Model, route, promptTokens, completionTokens, startTime, c.ClientIP())
+			processBillingAndAudit(userID, c.GetString("org_id"), requestID, req.Model, route, promptTokens, completionTokens, startTime, c.ClientIP())
 		}
-		
+
 		return nil
 	case <-c.Request.Context().Done():
 		return c.Request.Context().Err()
@@ -325,12 +342,12 @@ func attemptStreamResponse(c *gin.Context, p provider.Provider, route *models.Mo
 	return nil
 }
 
-func processBillingAndAudit(userID, requestID, modelName string, route *models.ModelRoute, promptTokens, completionTokens int, startTime time.Time, clientIP string) {
+func processBillingAndAudit(userID, orgID, requestID, modelName string, route *models.ModelRoute, promptTokens, completionTokens int, startTime time.Time, clientIP string) {
 	// 1. Fetch Model for Retail Pricing
 	var modelDef models.Model
 	if err := config.DB.First(&modelDef, "id = ?", modelName).Error; err != nil {
 		log.Printf("Error fetching model definition for billing: %v", err)
-		// Fallback to 0 cost or default? 
+		// Fallback to 0 cost or default?
 		// For safety, let's log error and maybe charge 0, but this is a critical error.
 	}
 
@@ -348,44 +365,143 @@ func processBillingAndAudit(userID, requestID, modelName string, route *models.M
 	latency := time.Since(startTime).Milliseconds()
 
 	tx := config.DB.Begin()
-	
-	// 2. Deduct Balance (User Cost)
-	if err := tx.Model(&models.User{}).Where("id = ?", userID).Update("balance", gorm.Expr("balance - ?", totalUserCost)).Error; err != nil {
-		tx.Rollback()
-		log.Printf("Failed to update balance for user %s: %v", userID, err)
-		return
-	}
-	
-	// Check for balance alert
-	// We can do this async
-	go checkBalanceAlert(userID)
 
-	// 3. Create Transaction Record
-	transaction := models.Transaction{
-		UserID:      userID,
-		Type:        "consumption",
-		Amount:      totalUserCost,
-		Description: fmt.Sprintf("Chat Completion (%s)", modelName),
-		ReferenceID: requestID,
-		Status:      "completed",
-	}
-	if err := tx.Create(&transaction).Error; err != nil {
+	var user models.User
+	if err := tx.Select("id, balance, is_admin").Clauses(clause.Locking{Strength: "UPDATE"}).First(&user, "id = ?", userID).Error; err != nil {
 		tx.Rollback()
-		log.Printf("Failed to create transaction record: %v", err)
+		log.Printf("Failed to fetch user for billing %s: %v", userID, err)
 		return
+	}
+
+	if user.IsAdmin {
+		totalUserCost = 0
+	}
+
+	now := time.Now()
+	costFromBalance := totalUserCost
+	paymentMethod := "balance"
+	if totalUserCost > 0 {
+		if sub, plan, err := loadActiveSubscriptionForBilling(tx, userID, now); err == nil && plan != nil && plan.IsActive && sub.RemainingQuota > 0 {
+			allowed := len(plan.AllowedModels) == 0
+			if !allowed {
+				for _, m := range plan.AllowedModels {
+					if m == modelName {
+						allowed = true
+						break
+					}
+				}
+			}
+			if allowed {
+				useFromSub := totalUserCost
+				if useFromSub > sub.RemainingQuota {
+					useFromSub = sub.RemainingQuota
+				}
+				if useFromSub > 0 {
+					upd := tx.Model(&models.UserSubscription{}).
+						Where("id = ? AND remaining_quota >= ?", sub.ID, useFromSub).
+						Update("remaining_quota", gorm.Expr("remaining_quota - ?", useFromSub))
+					if upd.Error != nil {
+						tx.Rollback()
+						log.Printf("Failed to update subscription quota for user %s: %v", userID, upd.Error)
+						return
+					}
+					if upd.RowsAffected > 0 {
+						costFromBalance = totalUserCost - useFromSub
+						if costFromBalance <= 0 {
+							paymentMethod = "subscription"
+						} else {
+							paymentMethod = "subscription+balance"
+						}
+					}
+				}
+			}
+		}
+	}
+
+	transaction := models.Transaction{
+		UserID:        userID,
+		Type:          "consumption",
+		Amount:        totalUserCost,
+		Description:   fmt.Sprintf("Chat Completion (%s)", modelName),
+		ReferenceID:   requestID,
+		Status:        "pending",
+		PaymentMethod: paymentMethod,
+	}
+	createRes := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&transaction)
+	if createRes.Error != nil {
+		tx.Rollback()
+		log.Printf("Failed to create transaction record: %v", createRes.Error)
+		return
+	}
+	if createRes.RowsAffected == 0 {
+		tx.Rollback()
+		return
+	}
+
+	statusCode := http.StatusOK
+	if costFromBalance > 0 {
+		deductRes := tx.Model(&models.User{}).
+			Where("id = ? AND balance >= ?", userID, costFromBalance).
+			Update("balance", gorm.Expr("balance - ?", costFromBalance))
+		if deductRes.Error != nil {
+			tx.Rollback()
+			log.Printf("Failed to update balance for user %s: %v", userID, deductRes.Error)
+			return
+		}
+		if deductRes.RowsAffected == 0 {
+			statusCode = http.StatusPaymentRequired
+			transaction.Status = "failed"
+		} else {
+			transaction.Status = "completed"
+		}
+	} else {
+		transaction.Status = "completed"
+	}
+	if err := tx.Save(&transaction).Error; err != nil {
+		tx.Rollback()
+		log.Printf("Failed to update transaction status: %v", err)
+		return
+	}
+
+	if statusCode == http.StatusOK && orgID != "" && totalUserCost > 0 {
+		period := now.Format("2006-01")
+		usage := models.OrgUsage{
+			OrgID:  orgID,
+			Period: period,
+			Spent:  totalUserCost,
+		}
+		if err := tx.Clauses(clause.OnConflict{
+			Columns: []clause.Column{{Name: "org_id"}, {Name: "period"}},
+			DoUpdates: clause.Assignments(map[string]any{
+				"spent":      gorm.Expr("spent + ?", totalUserCost),
+				"updated_at": time.Now(),
+			}),
+		}).Create(&usage).Error; err != nil {
+			tx.Rollback()
+			log.Printf("Failed to update org usage: %v", err)
+			return
+		}
 	}
 
 	// 4. Create Audit Log
+	paidCost := totalUserCost
+	paidProviderCost := totalProviderCost
+	if statusCode != http.StatusOK {
+		paidCost = 0
+		paidProviderCost = 0
+	}
 	auditLog := models.AuditLog{
 		RequestID:        requestID,
 		UserID:           userID,
 		Model:            modelName,
 		ProviderID:       route.ProviderID,
+		OrgID:            orgID,
 		PromptTokens:     promptTokens,
 		CompletionTokens: completionTokens,
-		TotalCost:        totalUserCost, // Tracking what user paid
+		TotalCost:        paidCost,
+		ProviderCost:     paidProviderCost,
 		LatencyMS:        latency,
-		StatusCode:       http.StatusOK,
+		StatusCode:       statusCode,
 		ClientIP:         clientIP,
 	}
 	if err := tx.Create(&auditLog).Error; err != nil {
@@ -395,10 +511,14 @@ func processBillingAndAudit(userID, requestID, modelName string, route *models.M
 	}
 
 	tx.Commit()
-	
+
+	if statusCode == http.StatusOK && costFromBalance > 0 {
+		go checkBalanceAlert(userID)
+	}
+
 	// Optional: Log Provider Cost for internal analytics (maybe to a different table or log file)
-	log.Printf("[ARBITRAGE] ReqID: %s | UserPaid: %.6f | ProviderCost: %.6f | Margin: %.6f", 
-		requestID, totalUserCost, totalProviderCost, totalUserCost - totalProviderCost)
+	log.Printf("[ARBITRAGE] ReqID: %s | UserPaid: %.6f | ProviderCost: %.6f | Margin: %.6f",
+		requestID, totalUserCost, totalProviderCost, totalUserCost-totalProviderCost)
 }
 
 // Simple token estimation (approx 4 chars = 1 token)

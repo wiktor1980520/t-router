@@ -13,15 +13,31 @@ interface Transaction {
   reference_id?: string;
 }
 
+interface Subscription {
+  id: string;
+  status: string;
+  start_at: string;
+  end_at: string;
+  remaining_quota: number;
+  plan: {
+    id: number;
+    name: string;
+    monthly_price: number;
+    monthly_quota: number;
+  };
+}
+
 const Billing = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [showRechargeModal, setShowRechargeModal] = useState(false);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
 
   useEffect(() => {
     fetchTransactions();
+    fetchSubscription();
   }, []);
 
   const fetchTransactions = async () => {
@@ -32,6 +48,15 @@ const Billing = () => {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSubscription = async () => {
+    try {
+      const res = await api.get<{ subscription: Subscription | null }>('/user/subscription');
+      setSubscription(res.data.subscription);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -61,6 +86,22 @@ const Billing = () => {
           <div>
             <h2 className="text-lg font-medium text-gray-300">{t('dashboard.current_balance')}</h2>
             <p className="mt-2 text-3xl font-bold text-white">¥{user?.balance.toFixed(2)}</p>
+            {subscription && (
+              <div className="mt-3 text-sm text-gray-400 space-y-1">
+                <div>
+                  {t('billing.subscription')}{t('common.colon', { defaultValue: '：' })}
+                  <span className="text-white">{subscription.plan.name}</span>
+                </div>
+                <div>
+                  {t('billing.subscription_remaining')}{t('common.colon', { defaultValue: '：' })}
+                  <span className="text-white">¥{subscription.remaining_quota.toFixed(2)}</span>
+                </div>
+                <div>
+                  {t('billing.subscription_expires')}{t('common.colon', { defaultValue: '：' })}
+                  <span className="text-white">{new Date(subscription.end_at).toLocaleString()}</span>
+                </div>
+              </div>
+            )}
           </div>
           <button
             onClick={() => setShowRechargeModal(true)}

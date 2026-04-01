@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { 
@@ -49,7 +49,7 @@ export default function AdminUsers() {
   const [rechargeRemark, setRechargeRemark] = useState('');
   const [rechargeLoading, setRechargeLoading] = useState(false);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get<UsersResponse>(`/admin/users?page=${page}&page_size=${pageSize}`);
@@ -60,11 +60,11 @@ export default function AdminUsers() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize]);
 
   useEffect(() => {
     fetchUsers();
-  }, [page, pageSize]);
+  }, [fetchUsers]);
 
   const handleToggleStatus = async (userId: string, currentStatus: boolean) => {
     if (!window.confirm(currentStatus ? t('admin.confirm_disable') : t('admin.confirm_enable'))) return;

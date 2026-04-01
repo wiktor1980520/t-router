@@ -6,6 +6,7 @@ CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255), -- Nullable if using only OAuth
+    invitation_code VARCHAR(20), -- Uppercased; used for channel attribution
     balance DECIMAL(20, 6) DEFAULT 0.000000 CHECK (balance >= 0), -- Stored in USD, precision up to 6 decimal places
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -15,6 +16,7 @@ CREATE TABLE users (
 CREATE TABLE api_keys (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id),
+    org_id UUID, -- Optional: attach key to organization/team
     key_hash VARCHAR(255) UNIQUE NOT NULL, -- Store hashed key, not raw
     key_prefix VARCHAR(10) NOT NULL, -- First few chars for display (e.g., "sk-...")
     label VARCHAR(50),
@@ -23,6 +25,35 @@ CREATE TABLE api_keys (
     expires_at TIMESTAMP WITH TIME ZONE,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE organizations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) NOT NULL,
+    owner_id UUID NOT NULL REFERENCES users(id),
+    monthly_budget DECIMAL(20, 8) NOT NULL DEFAULT 0.0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE org_members (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_id UUID NOT NULL REFERENCES organizations(id),
+    user_id UUID NOT NULL REFERENCES users(id),
+    role VARCHAR(20) NOT NULL DEFAULT 'member',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(org_id, user_id)
+);
+
+CREATE TABLE org_usage (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_id UUID NOT NULL REFERENCES organizations(id),
+    period VARCHAR(7) NOT NULL,
+    spent DECIMAL(20, 8) NOT NULL DEFAULT 0.0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(org_id, period)
 );
 
 -- 2. Models & Providers (The Core Routing Data)
@@ -71,16 +102,60 @@ CREATE TABLE model_provider_mappings (
 CREATE TABLE transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id),
-    amount DECIMAL(20, 6) NOT NULL, -- Positive for deposit, Negative for usage
-    type VARCHAR(20) NOT NULL, -- 'deposit', 'usage', 'refund'
-    reference_id VARCHAR(255), -- Stripe Charge ID or Request ID
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    amount DECIMAL(20, 8) NOT NULL,
+    type VARCHAR(20) NOT NULL, -- 'recharge', 'consumption'
+    status VARCHAR(20) NOT NULL DEFAULT 'completed', -- 'pending', 'completed', 'failed'
+    payment_method VARCHAR(50),
+    description VARCHAR(255),
+    reference_id VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(type, reference_id)
+);
+
+CREATE TABLE payment_orders (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id),
+    out_trade_no VARCHAR(100) NOT NULL UNIQUE,
+    channel VARCHAR(50) NOT NULL,
+    amount DECIMAL(20, 8) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending', -- 'pending', 'paid', 'manual_review'
+    gateway_trade_no VARCHAR(100),
+    notify_payload TEXT,
+    paid_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE subscription_plans (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    monthly_price DECIMAL(20, 8) NOT NULL DEFAULT 0.0,
+    monthly_quota DECIMAL(20, 8) NOT NULL DEFAULT 0.0,
+    allowed_models TEXT,
+    rate_limit INT NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE user_subscriptions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id),
+    plan_id BIGINT NOT NULL REFERENCES subscription_plans(id),
+    status VARCHAR(20) NOT NULL DEFAULT 'active',
+    start_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    end_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    remaining_quota DECIMAL(20, 8) NOT NULL DEFAULT 0.0,
+    auto_renew BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE request_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id),
     api_key_id UUID REFERENCES api_keys(id),
+    org_id UUID REFERENCES organizations(id),
     
     model_id VARCHAR(100) NOT NULL,
     provider_id VARCHAR(50) NOT NULL, -- Which provider actually served this
@@ -88,6 +163,7 @@ CREATE TABLE request_logs (
     prompt_tokens INT NOT NULL,
     completion_tokens INT NOT NULL,
     total_cost DECIMAL(12, 8) NOT NULL,
+    provider_cost DECIMAL(12, 8) NOT NULL DEFAULT 0.0,
     
     status_code INT NOT NULL,
     duration_ms INT NOT NULL,

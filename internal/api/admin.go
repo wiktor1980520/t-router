@@ -15,8 +15,14 @@ import (
 
 // AdminListInvitationCodesHandler lists all invitation codes
 func AdminListInvitationCodesHandler(c *gin.Context) {
-	var codes []models.InvitationCode
-	if err := config.DB.Order("created_at desc").Find(&codes).Error; err != nil {
+	codes := make([]models.InvitationCode, 0)
+	if err := config.DB.
+		Table("invitation_codes").
+		Select("invitation_codes.*, COALESCE(COUNT(users.id), 0) as used_count").
+		Joins("LEFT JOIN users ON UPPER(users.invitation_code) = UPPER(invitation_codes.code)").
+		Group("invitation_codes.id").
+		Order("invitation_codes.created_at desc").
+		Scan(&codes).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch invitation codes"})
 		return
 	}
@@ -86,21 +92,25 @@ func AdminListUsersHandler(c *gin.Context) {
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-	
-	if page < 1 { page = 1 }
-	if pageSize < 1 { pageSize = 20 }
+
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 20
+	}
 
 	config.DB.Model(&models.User{}).Count(&total)
-	
+
 	if err := config.DB.Order("created_at desc").Offset((page - 1) * pageSize).Limit(pageSize).Find(&users).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"users": users,
-		"total": total,
-		"page":  page,
+		"users":     users,
+		"total":     total,
+		"page":      page,
 		"page_size": pageSize,
 	})
 }
@@ -137,32 +147,32 @@ func AdminToggleUserStatusHandler(c *gin.Context) {
 
 // AdminGetTransactionsHandler gets all transactions (optionally filtered by user or type)
 func AdminGetTransactionsHandler(c *gin.Context) {
-    userID := c.Query("user_id")
-    txnType := c.Query("type") // "recharge" or "consumption"
+	userID := c.Query("user_id")
+	txnType := c.Query("type") // "recharge" or "consumption"
 
-    var transactions []models.Transaction
-    
-    query := config.DB.Order("created_at desc")
-    
-    if userID != "" {
-        query = query.Where("user_id = ?", userID)
-    }
-    if txnType != "" {
-        query = query.Where("type = ?", txnType)
-    }
-    
-    if err := query.Limit(100).Find(&transactions).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch transactions"})
-        return
-    }
-    
-    c.JSON(http.StatusOK, transactions)
+	var transactions []models.Transaction
+
+	query := config.DB.Order("created_at desc")
+
+	if userID != "" {
+		query = query.Where("user_id = ?", userID)
+	}
+	if txnType != "" {
+		query = query.Where("type = ?", txnType)
+	}
+
+	if err := query.Limit(100).Find(&transactions).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch transactions"})
+		return
+	}
+
+	c.JSON(http.StatusOK, transactions)
 }
 
 // AdminRechargeUserHandler allows admins to manually recharge a user's balance
 func AdminRechargeUserHandler(c *gin.Context) {
 	// Only admin middleware should allow access here
-	
+
 	var req struct {
 		UserID string  `json:"user_id" binding:"required"`
 		Amount float64 `json:"amount" binding:"required,gt=0"`
@@ -185,7 +195,7 @@ func AdminRechargeUserHandler(c *gin.Context) {
 		Description: "Admin Gift: " + req.Remark,
 		ReferenceID: "ADMIN-" + uuid.New().String(),
 	}
-	
+
 	if err := tx.Create(&transaction).Error; err != nil {
 		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create transaction record"})
@@ -202,8 +212,8 @@ func AdminRechargeUserHandler(c *gin.Context) {
 	tx.Commit()
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "User balance updated successfully",
-		"amount":  req.Amount,
+		"message":           "User balance updated successfully",
+		"amount":            req.Amount,
 		"new_balance_added": true,
 	})
 }

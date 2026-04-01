@@ -8,7 +8,8 @@ import {
   X,
   Calendar,
   User as UserIcon,
-  StickyNote
+  StickyNote,
+  Users
 } from 'lucide-react';
 import api from '../../lib/api';
 import type { AxiosError } from 'axios';
@@ -19,6 +20,7 @@ interface InvitationCode {
   remark: string;
   created_by: string;
   created_at: string;
+  used_count?: number;
 }
 
 export default function InvitationCodesPage() {
@@ -129,6 +131,13 @@ export default function InvitationCodesPage() {
                 <div className="flex items-start gap-2 text-sm text-gray-400">
                   <StickyNote className="w-4 h-4 mt-0.5 shrink-0" />
                   <span className="break-all">{code.remark || t('admin.no_remark')}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <Users className="w-4 h-4 shrink-0" />
+                  <span>
+                    {t('admin.invitation_used_count')}{t('common.colon', { defaultValue: '：' })}
+                    {code.used_count ?? 0}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   <Calendar className="w-4 h-4 shrink-0" />

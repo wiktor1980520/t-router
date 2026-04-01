@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Users, Database, DollarSign, Settings, Ticket } from 'lucide-react';
+import { Users, Database, DollarSign, Settings, Ticket, BarChart3, CreditCard } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const AdminDashboard = () => {
@@ -62,6 +62,30 @@ const AdminDashboard = () => {
             </div>
           </div>
           <p className="text-gray-400">{t('admin.invitation_codes_desc')}</p>
+        </Link>
+
+        <Link to="/admin/analytics" className="bg-gray-800 border border-gray-700 p-6 rounded-xl hover:bg-gray-750 hover:border-cyan-500/50 transition-all group">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-3 bg-cyan-500/10 rounded-lg group-hover:bg-cyan-500/20 transition-colors">
+              <BarChart3 className="w-8 h-8 text-cyan-400" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-xl text-white">{t('admin.analytics')}</h3>
+            </div>
+          </div>
+          <p className="text-gray-400">{t('admin.analytics_desc')}</p>
+        </Link>
+
+        <Link to="/admin/subscriptions" className="bg-gray-800 border border-gray-700 p-6 rounded-xl hover:bg-gray-750 hover:border-emerald-500/50 transition-all group">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="p-3 bg-emerald-500/10 rounded-lg group-hover:bg-emerald-500/20 transition-colors">
+              <CreditCard className="w-8 h-8 text-emerald-400" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-xl text-white">{t('admin.subscription_plans')}</h3>
+            </div>
+          </div>
+          <p className="text-gray-400">{t('admin.subscription_plans_desc')}</p>
         </Link>
 
         <Link to="/admin/config" className="bg-gray-800 border border-gray-700 p-6 rounded-xl hover:bg-gray-750 hover:border-orange-500/50 transition-all group">

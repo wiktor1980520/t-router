@@ -17,10 +17,10 @@ import (
 )
 
 type AnthropicProvider struct {
-	apiKey          string
-	baseURL         string
+	apiKey           string
+	baseURL          string
 	anthropicVersion string
-	client          *http.Client
+	client           *http.Client
 }
 
 type anthropicTextBlock struct {
@@ -29,17 +29,17 @@ type anthropicTextBlock struct {
 }
 
 type anthropicMessage struct {
-	Role    string              `json:"role"`
+	Role    string               `json:"role"`
 	Content []anthropicTextBlock `json:"content"`
 }
 
 type anthropicMessagesRequest struct {
-	Model       string            `json:"model"`
-	MaxTokens   int               `json:"max_tokens"`
+	Model       string             `json:"model"`
+	MaxTokens   int                `json:"max_tokens"`
 	Messages    []anthropicMessage `json:"messages"`
-	System      string            `json:"system,omitempty"`
-	Temperature float64           `json:"temperature,omitempty"`
-	Stream      bool              `json:"stream,omitempty"`
+	System      string             `json:"system,omitempty"`
+	Temperature float64            `json:"temperature,omitempty"`
+	Stream      bool               `json:"stream,omitempty"`
 }
 
 type anthropicUsage struct {
@@ -48,11 +48,11 @@ type anthropicUsage struct {
 }
 
 type anthropicMessagesResponse struct {
-	ID      string              `json:"id"`
-	Type    string              `json:"type"`
-	Role    string              `json:"role"`
+	ID      string               `json:"id"`
+	Type    string               `json:"type"`
+	Role    string               `json:"role"`
 	Content []anthropicTextBlock `json:"content"`
-	Usage   anthropicUsage      `json:"usage"`
+	Usage   anthropicUsage       `json:"usage"`
 }
 
 type anthropicErrorResponse struct {
@@ -74,10 +74,10 @@ func NewAnthropicProvider(apiKey string, baseURL string) provider.Provider {
 	}
 
 	return &AnthropicProvider{
-		apiKey:          apiKey,
-		baseURL:         baseURL,
+		apiKey:           apiKey,
+		baseURL:          baseURL,
 		anthropicVersion: version,
-		client:          &http.Client{Timeout: 60 * time.Second},
+		client:           &http.Client{Timeout: 60 * time.Second},
 	}
 }
 
@@ -181,6 +181,9 @@ func (p *AnthropicProvider) setHeaders(r *http.Request) {
 	r.Header.Set("Content-Type", "application/json")
 	r.Header.Set("x-api-key", p.apiKey)
 	r.Header.Set("anthropic-version", p.anthropicVersion)
+	if requestID := provider.RequestIDFromContext(r.Context()); requestID != "" {
+		r.Header.Set("X-Request-ID", requestID)
+	}
 }
 
 func (p *AnthropicProvider) ChatCompletion(ctx context.Context, req *models.ChatCompletionRequest) (*models.ChatCompletionResponse, error) {
@@ -348,4 +351,3 @@ func (p *AnthropicProvider) ChatCompletionStream(ctx context.Context, req *model
 		}
 	}
 }
-

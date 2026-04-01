@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Key, CreditCard, LogOut, Settings, Menu, X, Database, ShieldCheck, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Key, CreditCard, LogOut, Settings, Menu, X, Database, ShieldCheck, MessageSquare, Users } from 'lucide-react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 
@@ -16,6 +16,7 @@ const Layout = () => {
     { name: t('nav.playground'), href: '/dashboard/playground', icon: MessageSquare },
     { name: t('nav.api_keys'), href: '/dashboard/keys', icon: Key },
     { name: t('nav.billing'), href: '/dashboard/billing', icon: CreditCard },
+    { name: t('nav.team'), href: '/dashboard/team', icon: Users },
     { name: t('nav.settings'), href: '/dashboard/settings', icon: Settings },
   ];
 

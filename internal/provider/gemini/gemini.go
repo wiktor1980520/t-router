@@ -30,8 +30,8 @@ type geminiContent struct {
 }
 
 type geminiGenerationConfig struct {
-	Temperature      float64 `json:"temperature,omitempty"`
-	MaxOutputTokens  int     `json:"maxOutputTokens,omitempty"`
+	Temperature     float64 `json:"temperature,omitempty"`
+	MaxOutputTokens int     `json:"maxOutputTokens,omitempty"`
 }
 
 type geminiRequest struct {
@@ -171,6 +171,9 @@ func (p *GeminiProvider) ChatCompletion(ctx context.Context, req *models.ChatCom
 		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	if requestID := provider.RequestIDFromContext(httpReq.Context()); requestID != "" {
+		httpReq.Header.Set("X-Request-ID", requestID)
+	}
 
 	resp, err := p.client.Do(httpReq)
 	if err != nil {
@@ -265,4 +268,3 @@ func (p *GeminiProvider) ChatCompletionStream(ctx context.Context, req *models.C
 
 	return nil
 }
-

@@ -42,33 +42,33 @@ func VerifyTurnstile(token string, ip string) bool {
 		log.Println("Turnstile: Missing token")
 		return false
 	}
-	
+
 	log.Printf("Turnstile: Verifying token for IP %s", ip)
-	
+
 	// Use Cloudflare's verification API
 	// https://developers.cloudflare.com/turnstile/get-started/server-side-validation/
-	
+
 	// Simple implementation using http.PostForm
 	resp, err := http.PostForm("https://challenges.cloudflare.com/turnstile/v0/siteverify",
 		map[string][]string{
 			"secret":   {turnstileSecretKey},
 			"response": {token},
 		})
-		
+
 	if err != nil {
 		return false
 	}
 	defer resp.Body.Close()
-	
+
 	var result struct {
 		Success    bool     `json:"success"`
 		ErrorCodes []string `json:"error-codes"`
 	}
-	
+
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return false
 	}
-	
+
 	if !result.Success {
 		log.Printf("Turnstile verification failed: errors=%v ip=%s", result.ErrorCodes, ip)
 	}
@@ -110,7 +110,7 @@ func RegisterHandler(c *gin.Context) {
 			var dbCode models.InvitationCode
 			// Use case-insensitive check for the code
 			err := config.DB.Where("UPPER(code) = ?", strings.ToUpper(req.InvitationCode)).First(&dbCode).Error
-			
+
 			if err != nil {
 				// Fallback to legacy config-based codes if not found in DB
 				validCodes := strings.Split(invCodesConfig.Value, ",")
@@ -181,10 +181,11 @@ func RegisterHandler(c *gin.Context) {
 
 	phonePtr := &req.Phone
 	user := models.User{
-		Email:        req.Email,
-		Phone:        phonePtr,
-		PasswordHash: string(hashedPassword),
-		Balance:      initialBalance, // Set from config
+		Email:          req.Email,
+		Phone:          phonePtr,
+		PasswordHash:   string(hashedPassword),
+		InvitationCode: strings.ToUpper(strings.TrimSpace(req.InvitationCode)),
+		Balance:        initialBalance, // Set from config
 	}
 
 	if err := config.DB.Create(&user).Error; err != nil {
@@ -247,6 +248,10 @@ func LoginHandler(c *gin.Context) {
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
 		log.Printf("Login failed: Password mismatch for user %s", req.Email)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		return
+	}
+	if !user.IsActive {
+		c.JSON(http.StatusForbidden, gin.H{"error": "User account is disabled"})
 		return
 	}
 

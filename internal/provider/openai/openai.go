@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 	"trouter/internal/models"
 	"trouter/internal/provider"
 )
@@ -21,11 +22,11 @@ type OpenAIProvider struct {
 }
 
 type upstreamChatCompletionRequest struct {
-	Model       string           `json:"model"`
-	Messages    []models.Message `json:"messages"`
-	Stream      bool             `json:"stream,omitempty"`
-	Temperature float64          `json:"temperature,omitempty"`
-	MaxTokens   int              `json:"max_tokens,omitempty"`
+	Model         string                `json:"model"`
+	Messages      []models.Message      `json:"messages"`
+	Stream        bool                  `json:"stream,omitempty"`
+	Temperature   float64               `json:"temperature,omitempty"`
+	MaxTokens     int                   `json:"max_tokens,omitempty"`
 	StreamOptions *models.StreamOptions `json:"stream_options,omitempty"`
 }
 
@@ -47,7 +48,7 @@ func NewOpenAIProvider(apiKey string, baseURL string) provider.Provider {
 	return &OpenAIProvider{
 		apiKey:  apiKey,
 		baseURL: normalizeBaseURL(baseURL),
-		client:  &http.Client{},
+		client:  &http.Client{Timeout: 60 * time.Second},
 	}
 }
 
@@ -122,7 +123,7 @@ func (p *OpenAIProvider) ChatCompletion(ctx context.Context, req *models.ChatCom
 func (p *OpenAIProvider) ChatCompletionStream(ctx context.Context, req *models.ChatCompletionRequest, responseChan chan<- *models.StreamResponse) error {
 	// Force stream to true
 	req.Stream = true
-	
+
 	upstreamReq := buildUpstreamRequest(req)
 	reqBody, err := json.Marshal(upstreamReq)
 	if err != nil {
@@ -190,4 +191,7 @@ func (p *OpenAIProvider) ChatCompletionStream(ctx context.Context, req *models.C
 func (p *OpenAIProvider) setHeaders(req *http.Request) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+p.apiKey)
+	if requestID := provider.RequestIDFromContext(req.Context()); requestID != "" {
+		req.Header.Set("X-Request-ID", requestID)
+	}
 }

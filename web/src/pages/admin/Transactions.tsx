@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   ArrowLeftRight, 
   Search, 
@@ -29,14 +29,15 @@ export default function AdminTransactions() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<string>('');
-  const [userIdFilter, setUserIdFilter] = useState('');
+  const [userIdInput, setUserIdInput] = useState('');
+  const [userIdQuery, setUserIdQuery] = useState('');
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = useCallback(async () => {
     try {
       setLoading(true);
       let url = '/admin/transactions?';
       if (filterType) url += `type=${filterType}&`;
-      if (userIdFilter) url += `user_id=${userIdFilter}&`;
+      if (userIdQuery) url += `user_id=${userIdQuery}&`;
       
       const response = await api.get<Transaction[]>(url);
       setTransactions(response.data);
@@ -45,15 +46,15 @@ export default function AdminTransactions() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterType, userIdQuery]);
 
   useEffect(() => {
     fetchTransactions();
-  }, [filterType]); // Refetch when type changes
+  }, [fetchTransactions]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchTransactions();
+    setUserIdQuery(userIdInput);
   };
 
   return (
@@ -74,8 +75,8 @@ export default function AdminTransactions() {
               <input
                 type="text"
                 placeholder={t('admin.filter_user_id')}
-                value={userIdFilter}
-                onChange={(e) => setUserIdFilter(e.target.value)}
+                value={userIdInput}
+                onChange={(e) => setUserIdInput(e.target.value)}
                 className="w-full bg-gray-900 border border-gray-700 text-white pl-10 pr-4 py-2 rounded-lg focus:outline-none focus:border-blue-500"
               />
             </div>

@@ -3,14 +3,17 @@ package api
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"trouter/internal/config"
 	"trouter/internal/models"
@@ -18,6 +21,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // YiPayConfig holds the configuration for YiPay
@@ -99,15 +103,19 @@ func SignBestPay(params map[string]string, key string) string {
 	return hex.EncodeToString(hash[:])
 }
 
+func amountToCents(v float64) int64 {
+	return int64(math.Round(v * 100))
+}
+
 // CreatePaymentHandler initiates a payment request
 func CreatePaymentHandler(c *gin.Context) {
 	userID := c.GetString("user_id")
-	
+
 	var req struct {
 		Amount float64 `json:"amount" binding:"required,gt=0"`
 		Method string  `json:"method"` // ignored for BestPay unified cashier
 	}
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -126,6 +134,13 @@ func CreatePaymentHandler(c *gin.Context) {
 
 	// 1. Create a pending transaction
 	orderID := uuid.New().String()
+	paymentOrder := models.PaymentOrder{
+		UserID:     userID,
+		OutTradeNo: orderID,
+		Channel:    channel,
+		Amount:     req.Amount,
+		Status:     "pending",
+	}
 	transaction := models.Transaction{
 		UserID:        userID,
 		Type:          "recharge",
@@ -136,10 +151,18 @@ func CreatePaymentHandler(c *gin.Context) {
 		ReferenceID:   orderID,
 	}
 
-	if err := config.DB.Create(&transaction).Error; err != nil {
+	tx := config.DB.Begin()
+	if err := tx.Create(&paymentOrder).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create payment order"})
+		return
+	}
+	if err := tx.Create(&transaction).Error; err != nil {
+		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create transaction"})
 		return
 	}
+	tx.Commit()
 
 	// 2. Prepare parameters for selected channel
 	// Construct absolute URLs for callbacks
@@ -149,7 +172,7 @@ func CreatePaymentHandler(c *gin.Context) {
 		scheme = "https"
 	}
 	baseURL := fmt.Sprintf("%s://%s", scheme, c.Request.Host)
-	
+
 	// For local dev, we might need a tunnel or these won't work for callbacks.
 	// Using localhost for return_url is fine for user redirect.
 	notifyURL := baseURL + "/api/payment/notify"
@@ -232,7 +255,7 @@ func PaymentNotifyHandler(c *gin.Context) {
 	if channel == "" {
 		channel = "bestpay"
 	}
-	
+
 	// 1. Verify Signature
 	sign := params["sign"]
 	var calculatedSign string
@@ -243,7 +266,7 @@ func PaymentNotifyHandler(c *gin.Context) {
 		cfg := getYiPayConfig()
 		calculatedSign = SignYiPay(params, cfg.Key)
 	}
-	
+
 	if sign != calculatedSign {
 		log.Printf("[Payment] Signature verification failed. Received: %s, Calculated: %s", sign, calculatedSign)
 		c.String(http.StatusBadRequest, "fail")
@@ -267,12 +290,58 @@ func PaymentNotifyHandler(c *gin.Context) {
 	if moneyStr == "" {
 		moneyStr = params["total_amount"]
 	}
-	money, _ := strconv.ParseFloat(moneyStr, 64)
+	money, err := strconv.ParseFloat(moneyStr, 64)
+	if err != nil {
+		log.Printf("[Payment] Invalid money amount: %s", moneyStr)
+		c.String(http.StatusBadRequest, "fail")
+		return
+	}
+	notifyPayloadBytes, _ := json.Marshal(params)
+	notifyPayload := string(notifyPayloadBytes)
 
 	tx := config.DB.Begin()
 
+	var order models.PaymentOrder
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("out_trade_no = ?", outTradeNo).First(&order).Error; err != nil {
+		tx.Rollback()
+		log.Printf("[Payment] Payment order not found: %s", outTradeNo)
+		c.String(http.StatusBadRequest, "fail")
+		return
+	}
+
+	order.NotifyPayload = notifyPayload
+	if v := params["trade_no"]; v != "" {
+		order.GatewayTradeNo = v
+	}
+
+	if order.Status == "paid" {
+		tx.Save(&order)
+		tx.Commit()
+		c.String(http.StatusOK, "success")
+		return
+	}
+
+	if amountToCents(money) != amountToCents(order.Amount) {
+		order.Status = "manual_review"
+		tx.Save(&order)
+		tx.Commit()
+		log.Printf("[Payment] Amount mismatch for %s. Notify: %.2f, Order: %.2f", outTradeNo, money, order.Amount)
+		c.String(http.StatusOK, "success")
+		return
+	}
+
+	now := time.Now()
+	order.Status = "paid"
+	order.PaidAt = &now
+	if err := tx.Save(&order).Error; err != nil {
+		tx.Rollback()
+		log.Printf("[Payment] Failed to update payment order: %v", err)
+		c.String(http.StatusInternalServerError, "fail")
+		return
+	}
+
 	var transaction models.Transaction
-	if err := tx.Where("reference_id = ?", outTradeNo).First(&transaction).Error; err != nil {
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("type = ? AND reference_id = ?", "recharge", outTradeNo).First(&transaction).Error; err != nil {
 		tx.Rollback()
 		log.Printf("[Payment] Transaction not found: %s", outTradeNo)
 		c.String(http.StatusBadRequest, "fail")
@@ -280,13 +349,22 @@ func PaymentNotifyHandler(c *gin.Context) {
 	}
 
 	if transaction.Status == "completed" {
-		tx.Rollback()
-		c.String(http.StatusOK, "success") // Already processed
+		tx.Commit()
+		c.String(http.StatusOK, "success")
 		return
 	}
 
-	// Update Transaction
+	if amountToCents(transaction.Amount) != amountToCents(order.Amount) {
+		order.Status = "manual_review"
+		tx.Save(&order)
+		tx.Commit()
+		log.Printf("[Payment] Transaction amount mismatch for %s. Tx: %.2f, Order: %.2f", outTradeNo, transaction.Amount, order.Amount)
+		c.String(http.StatusOK, "success")
+		return
+	}
+
 	transaction.Status = "completed"
+	transaction.PaymentMethod = channel
 	if err := tx.Save(&transaction).Error; err != nil {
 		tx.Rollback()
 		log.Printf("[Payment] Failed to update transaction: %v", err)
@@ -294,8 +372,7 @@ func PaymentNotifyHandler(c *gin.Context) {
 		return
 	}
 
-	// Update User Balance
-	if err := tx.Model(&models.User{}).Where("id = ?", transaction.UserID).Update("balance", gorm.Expr("balance + ?", money)).Error; err != nil {
+	if err := tx.Model(&models.User{}).Where("id = ?", transaction.UserID).Update("balance", gorm.Expr("balance + ?", order.Amount)).Error; err != nil {
 		tx.Rollback()
 		log.Printf("[Payment] Failed to update user balance: %v", err)
 		c.String(http.StatusInternalServerError, "fail")
@@ -303,7 +380,7 @@ func PaymentNotifyHandler(c *gin.Context) {
 	}
 
 	tx.Commit()
-	log.Printf("[Payment] Successfully processed order %s for user %s, amount: %.2f", outTradeNo, transaction.UserID, money)
+	log.Printf("[Payment] Successfully processed order %s for user %s, amount: %.2f", outTradeNo, transaction.UserID, order.Amount)
 
 	c.String(http.StatusOK, "success")
 }

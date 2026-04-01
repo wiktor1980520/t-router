@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   Settings, 
@@ -29,7 +29,7 @@ export default function SystemConfigPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-  const fetchConfigs = async () => {
+  const fetchConfigs = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get<SystemConfig[]>('/admin/config');
@@ -40,11 +40,11 @@ export default function SystemConfigPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     fetchConfigs();
-  }, []);
+  }, [fetchConfigs]);
 
   const handleEdit = (config: SystemConfig) => {
     setEditingId(config.id);
@@ -72,9 +72,7 @@ export default function SystemConfigPage() {
       });
       
       // Update local state
-      setConfigs(configs.map(c => 
-        c.id === config.id ? { ...c, value: editValue } : c
-      ));
+      setConfigs((prev) => prev.map(c => (c.id === config.id ? { ...c, value: editValue } : c)));
       
       setMessage({ type: 'success', text: t('admin.config_update_success') });
       setEditingId(null);

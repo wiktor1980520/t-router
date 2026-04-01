@@ -3,12 +3,12 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 	"trouter/internal/api"
 	adminApi "trouter/internal/api/admin"
 	"trouter/internal/config"
 	"trouter/internal/router"
 	"trouter/internal/sms"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -24,7 +24,7 @@ func main() {
 
 	// Initialize Database
 	config.InitDB()
-	
+
 	// Initialize SMS Provider
 	if err := sms.Init(); err != nil {
 		log.Printf("Warning: Failed to initialize SMS provider: %v. Using Mock Provider.", err)
@@ -42,8 +42,9 @@ func main() {
 		}
 	}
 	router.StartHealthCheckWorker(interval)
-	
-	r := gin.Default()
+
+	r := gin.New()
+	r.Use(api.RequestIDMiddleware())
 
 	// CORS Middleware
 	r.Use(func(c *gin.Context) {
@@ -66,8 +67,8 @@ func main() {
 	})
 
 	// Global Middleware
-	r.Use(gin.Recovery())
 	r.Use(gin.Logger())
+	r.Use(gin.Recovery())
 
 	// API Routes (V1 - OpenAI Compatible)
 	v1 := r.Group("/v1")
@@ -75,11 +76,11 @@ func main() {
 		// Apply API Key Auth Middleware to chat endpoints
 		v1.POST("/chat/completions", api.AuthMiddleware(), api.ChatCompletionHandler)
 		v1.GET("/models", api.AuthMiddleware(), api.ListV1ModelsHandler)
-		
+
 		// Health check
 		v1.GET("/health", func(c *gin.Context) {
 			c.JSON(200, gin.H{
-				"status": "ok",
+				"status":  "ok",
 				"service": "TRouter Gateway",
 			})
 		})
@@ -91,7 +92,7 @@ func main() {
 		// Public routes
 		dashboard.POST("/auth/register", api.RegisterHandler)
 		dashboard.POST("/auth/login", api.LoginHandler)
-		dashboard.POST("/auth/send-code", api.SendCodeHandler) // SMS Verification
+		dashboard.POST("/auth/send-code", api.SendCodeHandler)     // SMS Verification
 		dashboard.GET("/payment/notify", api.PaymentNotifyHandler) // Webhook endpoint
 
 		// Protected routes
@@ -100,15 +101,23 @@ func main() {
 		{
 			protected.GET("/user/me", api.GetMeHandler)
 			protected.GET("/user/transactions", api.GetTransactionsHandler)
+			protected.GET("/user/subscription", api.GetMySubscriptionHandler)
 			protected.POST("/user/recharge", api.RechargeHandler) // Keep for manual/admin
 			protected.POST("/payment/create", api.CreatePaymentHandler)
 			protected.PUT("/user/settings", api.UpdateSettingsHandler)
 			protected.GET("/user/stats", api.GetUserStatsHandler)
-			
-			protected.GET("/keys", api.ListApiKeysHandler)
+
+			protected.POST("/team", api.CreateOrganizationHandler)
+			protected.GET("/team", api.ListMyOrganizationsHandler)
+			protected.GET("/team/:id", api.GetOrganizationHandler)
+			protected.PUT("/team/:id", api.UpdateOrganizationHandler)
+			protected.POST("/team/:id/members", api.AddOrganizationMemberHandler)
+			protected.DELETE("/team/:id/members/:user_id", api.RemoveOrganizationMemberHandler)
+			protected.POST("/team/:id/api-keys/:key_id/attach", api.AttachApiKeyToOrganizationHandler)
+			protected.GET("/team/:id/audit_logs/export", api.ExportOrganizationAuditLogsHandler)
 			protected.POST("/keys", api.CreateApiKeyHandler)
 			protected.DELETE("/keys/:id", api.DeleteApiKeyHandler)
-			
+
 			protected.GET("/user/audit_logs", api.GetAuditLogsHandler)
 
 			// Read-only access for regular users
@@ -116,7 +125,7 @@ func main() {
 			protected.GET("/routes", api.ListModelRoutesHandler)
 			protected.GET("/models", api.ListModelsHandler)
 			protected.GET("/models/available", api.ListAvailableModelsHandler)
-			
+
 			// Playground Chat Endpoint (JWT Auth)
 			protected.POST("/chat/completions", api.ChatCompletionHandler)
 		}
@@ -125,6 +134,14 @@ func main() {
 		admin := dashboard.Group("/admin")
 		admin.Use(api.JWTMiddleware(), api.AdminMiddleware())
 		{
+			admin.GET("/metrics/overview", api.AdminMetricsOverviewHandler)
+			admin.GET("/metrics/invitations", api.AdminInvitationMetricsHandler)
+			admin.GET("/subscription-plans", api.AdminListSubscriptionPlansHandler)
+			admin.POST("/subscription-plans", api.AdminCreateSubscriptionPlanHandler)
+			admin.PUT("/subscription-plans/:id", api.AdminUpdateSubscriptionPlanHandler)
+			admin.DELETE("/subscription-plans/:id", api.AdminDeleteSubscriptionPlanHandler)
+			admin.POST("/subscriptions/grant", api.AdminGrantSubscriptionHandler)
+
 			// User Management
 			admin.GET("/users", api.AdminListUsersHandler)
 			admin.GET("/users/:id", api.AdminGetUserHandler)
@@ -142,10 +159,10 @@ func main() {
 			admin.POST("/providers", api.CreateProviderHandler)
 			admin.DELETE("/providers/:id", api.DeleteProviderHandler)
 			admin.PUT("/providers/:id", api.UpdateProviderHandler)
-			
+
 			admin.POST("/routes", api.CreateModelRouteHandler)
 			admin.DELETE("/routes/:id", api.DeleteModelRouteHandler)
-			
+
 			admin.POST("/models", api.CreateModelHandler)
 			admin.DELETE("/models/:id", api.DeleteModelHandler)
 

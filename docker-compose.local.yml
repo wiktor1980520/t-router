@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: trouter-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: trouter
+    ports:
+      - "5432:5432"
+    volumes:
+      - trouter_pgdata:/var/lib/postgresql/data
+
+volumes:
+  trouter_pgdata:

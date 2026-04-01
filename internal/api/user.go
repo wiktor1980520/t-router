@@ -23,9 +23,9 @@ func checkBalanceAlert(userID string) {
 	if user.Balance < user.BalanceAlertThreshold {
 		// In a real system, this would send an email or webhook
 		// For MVP, we'll just log it
-		log.Printf("[ALERT] User %s balance is low! Current: %.2f, Threshold: %.2f", 
+		log.Printf("[ALERT] User %s balance is low! Current: %.2f, Threshold: %.2f",
 			user.Email, user.Balance, user.BalanceAlertThreshold)
-		
+
 		// Create a system notification (mock)
 		// config.DB.Create(&Notification{...})
 	}
@@ -45,14 +45,14 @@ func ListApiKeysHandler(c *gin.Context) {
 
 func CreateApiKeyHandler(c *gin.Context) {
 	userID := c.GetString("user_id")
-	
+
 	// Check if user is admin
 	var user models.User
 	if err := config.DB.First(&user, "id = ?", userID).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user"})
 		return
 	}
-	
+
 	// Previous restriction removed as per new requirement: "Account must have a usable API Key to call the large model"
 	// If Admins cannot create API Keys, they cannot use the chat feature.
 	// if user.IsAdmin {
@@ -69,7 +69,7 @@ func CreateApiKeyHandler(c *gin.Context) {
 	// Generate a new key
 	// In production, use a secure random string generator
 	rawKey := "sk-" + uuid.New().String()
-	
+
 	pref := req.RoutingPreference
 	if pref == "" {
 		pref = "lowest_cost"
@@ -77,7 +77,7 @@ func CreateApiKeyHandler(c *gin.Context) {
 
 	apiKey := models.ApiKey{
 		UserID:            userID,
-		KeyHash:           rawKey, // In a real app, hash this!
+		KeyHash:           hashApiKey(rawKey),
 		KeyPrefix:         rawKey[:7],
 		Label:             req.Label,
 		RoutingPreference: pref,
@@ -121,21 +121,33 @@ func DeleteApiKeyHandler(c *gin.Context) {
 func GetTransactionsHandler(c *gin.Context) {
 	userID := c.GetString("user_id")
 	var transactions []models.Transaction
-	
+
 	if err := config.DB.Where("user_id = ?", userID).Order("created_at desc").Find(&transactions).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch transactions"})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, transactions)
 }
 
 func RechargeHandler(c *gin.Context) {
 	userID := c.GetString("user_id")
-	
+
+	var operator models.User
+	if err := config.DB.Select("id, is_admin").First(&operator, "id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user"})
+		return
+	}
+	if !operator.IsAdmin {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Manual recharge is admin-only"})
+		return
+	}
+
 	// Mock recharge request
 	type RechargeRequest struct {
-		Amount float64 `json:"amount" binding:"required,gt=0"`
+		Amount       float64 `json:"amount" binding:"required,gt=0"`
+		TargetUserID string  `json:"target_user_id"`
+		TargetEmail  string  `json:"target_email"`
 	}
 	var req RechargeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -143,18 +155,33 @@ func RechargeHandler(c *gin.Context) {
 		return
 	}
 
+	targetUserID := req.TargetUserID
+	if targetUserID == "" && req.TargetEmail != "" {
+		var target models.User
+		if err := config.DB.Select("id").First(&target, "email = ?", req.TargetEmail).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Target user not found"})
+			return
+		}
+		targetUserID = target.ID
+	}
+	if targetUserID == "" {
+		targetUserID = userID
+	}
+
 	// Start transaction
 	tx := config.DB.Begin()
 
 	// 1. Create Transaction Record
 	transaction := models.Transaction{
-		UserID:      userID,
-		Type:        "recharge",
-		Amount:      req.Amount,
-		Description: "Manual Recharge",
-		ReferenceID: uuid.New().String(),
+		UserID:        targetUserID,
+		Type:          "recharge",
+		Amount:        req.Amount,
+		Description:   "Manual Recharge",
+		ReferenceID:   uuid.New().String(),
+		Status:        "completed",
+		PaymentMethod: "manual",
 	}
-	
+
 	if err := tx.Create(&transaction).Error; err != nil {
 		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process recharge"})
@@ -162,47 +189,48 @@ func RechargeHandler(c *gin.Context) {
 	}
 
 	// 2. Update User Balance
-	if err := tx.Model(&models.User{}).Where("id = ?", userID).Update("balance", gorm.Expr("balance + ?", req.Amount)).Error; err != nil {
+	if err := tx.Model(&models.User{}).Where("id = ?", targetUserID).Update("balance", gorm.Expr("balance + ?", req.Amount)).Error; err != nil {
 		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update balance"})
 		return
 	}
 
 	tx.Commit()
-	
-	// Check balance alert (in case recharge brings it above threshold, 
-	// though usually we alert when it goes *below*. 
+
+	// Check balance alert (in case recharge brings it above threshold,
+	// though usually we alert when it goes *below*.
 	// But good to have consistent state checking)
-	go checkBalanceAlert(userID)
+	go checkBalanceAlert(targetUserID)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Recharge successful",
 		"amount":  req.Amount,
+		"user_id": targetUserID,
 	})
 }
 
 // UpdateSettingsHandler updates user preferences like balance alert threshold
 func UpdateSettingsHandler(c *gin.Context) {
 	userID := c.GetString("user_id")
-	
+
 	var req struct {
 		BalanceAlertThreshold *float64 `json:"balance_alert_threshold"`
 		Phone                 *string  `json:"phone"`
 		VerificationCode      string   `json:"verification_code"`
 	}
-	
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	updates := map[string]interface{}{}
 	if req.BalanceAlertThreshold != nil {
 		updates["balance_alert_threshold"] = *req.BalanceAlertThreshold
 	}
 	if req.Phone != nil {
 		if *req.Phone == "" {
-			// Clearing phone number might require verification too in strict systems, 
+			// Clearing phone number might require verification too in strict systems,
 			// but for now let's assume it's allowed or not supported via UI yet.
 			updates["phone"] = nil
 		} else {
@@ -215,30 +243,30 @@ func UpdateSettingsHandler(c *gin.Context) {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired verification code"})
 				return
 			}
-			
+
 			// Check if phone already taken
 			var existingUser models.User
 			if err := config.DB.Where("phone = ? AND id != ?", *req.Phone, userID).First(&existingUser).Error; err == nil {
 				c.JSON(http.StatusConflict, gin.H{"error": "Phone number already in use"})
 				return
 			}
-			
+
 			updates["phone"] = *req.Phone
 		}
 	}
-	
+
 	if len(updates) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No settings to update"})
 		return
 	}
-	
+
 	if err := config.DB.Model(&models.User{}).Where("id = ?", userID).Updates(updates).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update settings"})
 		return
 	}
 
 	go checkBalanceAlert(userID)
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Settings updated",
 		"updates": updates,
@@ -261,7 +289,7 @@ func GetUserStatsHandler(c *gin.Context) {
 		TotalCompletionTokens int64 `gorm:"column:total_completion_tokens"`
 	}
 	var tokenStats TokenStats
-	
+
 	if err := config.DB.Model(&models.AuditLog{}).
 		Where("user_id = ?", userID).
 		Select("COALESCE(SUM(prompt_tokens), 0) as total_prompt_tokens, COALESCE(SUM(completion_tokens), 0) as total_completion_tokens").
@@ -273,7 +301,7 @@ func GetUserStatsHandler(c *gin.Context) {
 	days := 10
 	now := time.Now()
 	startTime := now.AddDate(0, 0, -(days - 1))
-	
+
 	var logs []models.AuditLog
 	// Optimize: fetch CreatedAt and tokens
 	if err := config.DB.Select("created_at, prompt_tokens, completion_tokens").
@@ -305,7 +333,7 @@ func GetUserStatsHandler(c *gin.Context) {
 	for i := 0; i < days; i++ {
 		d := startTime.AddDate(0, 0, i)
 		dateStr := d.Format("2006-01-02")
-		
+
 		dailyUsage = append(dailyUsage, DailyUsage{
 			Date:   dateStr,
 			Usage:  usageMap[dateStr],

@@ -7,6 +7,7 @@ import RegisterPage from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import ApiKeys from './pages/Keys';
 import Billing from './pages/Billing';
+import Team from './pages/Team';
 import Settings from './pages/Settings';
 import Playground from './pages/Playground';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -16,6 +17,8 @@ import AdminModels from './pages/admin/Models';
 import AdminTransactions from './pages/admin/Transactions';
 import AdminSystemConfig from './pages/admin/SystemConfig';
 import AdminInvitationCodes from './pages/admin/InvitationCodes';
+import AdminAnalytics from './pages/admin/Analytics';
+import AdminSubscriptionPlans from './pages/admin/SubscriptionPlans';
 import Layout from './components/Layout';
 
 const ProtectedRoute = ({ children }: { children: ReactElement }) => {
@@ -63,6 +66,7 @@ function App() {
             <Route path="keys" element={<ApiKeys />} />
             <Route path="playground" element={<Playground />} />
             <Route path="billing" element={<Billing />} />
+            <Route path="team" element={<Team />} />
             <Route path="settings" element={<Settings />} />
           </Route>
 
@@ -74,6 +78,8 @@ function App() {
             <Route path="models" element={<AdminModels />} />
             <Route path="transactions" element={<AdminTransactions />} />
             <Route path="invitation-codes" element={<AdminInvitationCodes />} />
+            <Route path="analytics" element={<AdminAnalytics />} />
+            <Route path="subscriptions" element={<AdminSubscriptionPlans />} />
             <Route path="config" element={<AdminSystemConfig />} />
           </Route>
 

@@ -11,19 +11,20 @@ import (
 )
 
 type User struct {
-	ID        string    `gorm:"primaryKey;size:36" json:"id"`
-	Email     string    `gorm:"uniqueIndex;not null" json:"email"`
-	Phone     *string   `gorm:"uniqueIndex;size:20" json:"phone"` // Optional unique phone number
-	PasswordHash string `gorm:"default:'';not null" json:"-"`
-	Balance   float64   `gorm:"type:decimal(20,8);default:0" json:"balance"`
-	BalanceAlertThreshold float64 `gorm:"type:decimal(20,8);default:10.00" json:"balance_alert_threshold"` // Default alert at $10
-	IsActive  bool      `gorm:"default:true" json:"is_active"`
-	IsAdmin   bool      `gorm:"default:false" json:"is_admin"`
-	AllowedModels ModelList `gorm:"type:text" json:"allowed_models,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	
-	ApiKeys   []ApiKey  `gorm:"foreignKey:UserID" json:"api_keys,omitempty"`
+	ID                    string    `gorm:"primaryKey;size:36" json:"id"`
+	Email                 string    `gorm:"uniqueIndex;not null" json:"email"`
+	Phone                 *string   `gorm:"uniqueIndex;size:20" json:"phone"` // Optional unique phone number
+	PasswordHash          string    `gorm:"default:'';not null" json:"-"`
+	InvitationCode        string    `gorm:"size:20;index" json:"invitation_code,omitempty"`
+	Balance               float64   `gorm:"type:decimal(20,8);default:0" json:"balance"`
+	BalanceAlertThreshold float64   `gorm:"type:decimal(20,8);default:10.00" json:"balance_alert_threshold"` // Default alert at $10
+	IsActive              bool      `gorm:"default:true" json:"is_active"`
+	IsAdmin               bool      `gorm:"default:false" json:"is_admin"`
+	AllowedModels         ModelList `gorm:"type:text" json:"allowed_models,omitempty"`
+	CreatedAt             time.Time `json:"created_at"`
+	UpdatedAt             time.Time `json:"updated_at"`
+
+	ApiKeys      []ApiKey      `gorm:"foreignKey:UserID" json:"api_keys,omitempty"`
 	Transactions []Transaction `gorm:"foreignKey:UserID" json:"transactions,omitempty"`
 }
 
@@ -41,6 +42,7 @@ type InvitationCode struct {
 	Remark    string    `json:"remark"`
 	CreatedBy string    `gorm:"size:36" json:"created_by"`
 	CreatedAt time.Time `json:"created_at"`
+	UsedCount int64     `gorm:"-" json:"used_count,omitempty"`
 }
 
 func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
@@ -51,17 +53,18 @@ func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
 }
 
 type ApiKey struct {
-	ID        string    `gorm:"primaryKey;size:36" json:"id"`
-	UserID    string    `gorm:"size:36;not null;index" json:"user_id"`
-	KeyHash   string    `gorm:"uniqueIndex;not null" json:"key"` // Store hash, not raw key (Exposed as "key" for MVP)
-	KeyPrefix string    `gorm:"size:10;not null" json:"key_prefix"`
-	Label     string    `gorm:"size:50" json:"label"`
-	RoutingPreference string `gorm:"size:20;default:'lowest_cost'" json:"routing_preference"`
-	RateLimit         int    `gorm:"default:0" json:"rate_limit"` // RPM
-	AllowedModels     ModelList `gorm:"type:text" json:"allowed_models,omitempty"`
+	ID                string     `gorm:"primaryKey;size:36" json:"id"`
+	UserID            string     `gorm:"size:36;not null;index" json:"user_id"`
+	KeyHash           string     `gorm:"uniqueIndex;not null" json:"-"`
+	KeyPrefix         string     `gorm:"size:10;not null" json:"key_prefix"`
+	Label             string     `gorm:"size:50" json:"label"`
+	RoutingPreference string     `gorm:"size:20;default:'lowest_cost'" json:"routing_preference"`
+	RateLimit         int        `gorm:"default:0" json:"rate_limit"` // RPM
+	AllowedModels     ModelList  `gorm:"type:text" json:"allowed_models,omitempty"`
+	OrgID             *string    `gorm:"size:36;index" json:"org_id,omitempty"`
 	ExpiresAt         *time.Time `json:"expires_at"`
-	IsActive  bool      `gorm:"default:true" json:"is_active"`
-	CreatedAt time.Time `json:"created_at"`
+	IsActive          bool       `gorm:"default:true" json:"is_active"`
+	CreatedAt         time.Time  `json:"created_at"`
 }
 
 func (k *ApiKey) BeforeCreate(tx *gorm.DB) (err error) {
@@ -114,20 +117,74 @@ func (m ModelList) Value() (driver.Value, error) {
 }
 
 type Transaction struct {
-	ID          string    `gorm:"primaryKey;size:36" json:"id"`
-	UserID      string    `gorm:"size:36;not null;index" json:"user_id"`
-	Type        string    `gorm:"size:20;not null" json:"type"` // "recharge", "consumption"
-	Amount      float64   `gorm:"type:decimal(20,8);not null" json:"amount"`
-	Status      string    `gorm:"size:20;default:'completed'" json:"status"` // "pending", "completed", "failed"
-	PaymentMethod string  `gorm:"size:50" json:"payment_method"` // "alipay", "wxpay", "system"
-	Description string    `gorm:"size:255" json:"description"`
-	ReferenceID string    `gorm:"size:100;index" json:"reference_id"` // e.g., request ID or payment ID
-	CreatedAt   time.Time `json:"created_at"`
+	ID            string    `gorm:"primaryKey;size:36" json:"id"`
+	UserID        string    `gorm:"size:36;not null;index" json:"user_id"`
+	Type          string    `gorm:"size:20;not null;uniqueIndex:uniq_tx_type_ref" json:"type"` // "recharge", "consumption"
+	Amount        float64   `gorm:"type:decimal(20,8);not null" json:"amount"`
+	Status        string    `gorm:"size:20;default:'completed'" json:"status"` // "pending", "completed", "failed"
+	PaymentMethod string    `gorm:"size:50" json:"payment_method"`             // "alipay", "wxpay", "system"
+	Description   string    `gorm:"size:255" json:"description"`
+	ReferenceID   string    `gorm:"size:100;uniqueIndex:uniq_tx_type_ref;index" json:"reference_id"` // e.g., request ID or payment ID
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 func (t *Transaction) BeforeCreate(tx *gorm.DB) (err error) {
 	if t.ID == "" {
 		t.ID = uuid.New().String()
+	}
+	return
+}
+
+type PaymentOrder struct {
+	ID             string     `gorm:"primaryKey;size:36" json:"id"`
+	UserID         string     `gorm:"size:36;not null;index" json:"user_id"`
+	OutTradeNo     string     `gorm:"size:100;not null;uniqueIndex" json:"out_trade_no"`
+	Channel        string     `gorm:"size:50;not null" json:"channel"`
+	Amount         float64    `gorm:"type:decimal(20,8);not null" json:"amount"`
+	Status         string     `gorm:"size:20;default:'pending';index" json:"status"`
+	GatewayTradeNo string     `gorm:"size:100" json:"gateway_trade_no"`
+	NotifyPayload  string     `gorm:"type:text" json:"notify_payload"`
+	PaidAt         *time.Time `json:"paid_at"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+}
+
+func (o *PaymentOrder) BeforeCreate(tx *gorm.DB) (err error) {
+	if o.ID == "" {
+		o.ID = uuid.New().String()
+	}
+	return
+}
+
+type SubscriptionPlan struct {
+	ID            uint      `gorm:"primaryKey" json:"id"`
+	Name          string    `gorm:"size:100;not null;uniqueIndex" json:"name"`
+	MonthlyPrice  float64   `gorm:"type:decimal(20,8);default:0" json:"monthly_price"`
+	MonthlyQuota  float64   `gorm:"type:decimal(20,8);default:0" json:"monthly_quota"`
+	AllowedModels ModelList `gorm:"type:text" json:"allowed_models,omitempty"`
+	RateLimit     int       `gorm:"default:0" json:"rate_limit"`
+	IsActive      bool      `gorm:"default:true" json:"is_active"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+type UserSubscription struct {
+	ID             string           `gorm:"primaryKey;size:36" json:"id"`
+	UserID         string           `gorm:"size:36;not null;index" json:"user_id"`
+	PlanID         uint             `gorm:"not null;index" json:"plan_id"`
+	Plan           SubscriptionPlan `gorm:"foreignKey:PlanID" json:"plan"`
+	Status         string           `gorm:"size:20;default:'active';index" json:"status"`
+	StartAt        time.Time        `json:"start_at"`
+	EndAt          time.Time        `json:"end_at"`
+	RemainingQuota float64          `gorm:"type:decimal(20,8);default:0" json:"remaining_quota"`
+	AutoRenew      bool             `gorm:"default:false" json:"auto_renew"`
+	CreatedAt      time.Time        `json:"created_at"`
+	UpdatedAt      time.Time        `json:"updated_at"`
+}
+
+func (s *UserSubscription) BeforeCreate(tx *gorm.DB) (err error) {
+	if s.ID == "" {
+		s.ID = uuid.New().String()
 	}
 	return
 }
@@ -160,20 +217,20 @@ type Provider struct {
 
 // ModelRoute defines which provider serves which model and at what cost
 type ModelRoute struct {
-	ID         uint      `gorm:"primaryKey" json:"id"`
-	ModelName  string    `gorm:"size:50;not null;index" json:"model_name"` // e.g. "gpt-4"
-	ProviderID uint      `gorm:"not null;index" json:"provider_id"`
-	Provider   Provider  `gorm:"foreignKey:ProviderID" json:"provider"`
-	CostInput  float64   `gorm:"type:decimal(20,10);default:0" json:"cost_input"`  // Cost per 1M tokens
-	CostOutput float64   `gorm:"type:decimal(20,10);default:0" json:"cost_output"` // Cost per 1M tokens
-	Priority   int       `gorm:"default:0" json:"priority"`                        // Higher = preferred
-	Weight     int       `gorm:"default:10" json:"weight"`                         // For load balancing
-	IsActive   bool      `gorm:"default:true" json:"is_active"`
-	Latency    int       `gorm:"default:0" json:"latency"`                         // Latency in ms (updated by background job)
-	LastCheck  time.Time `json:"last_check"`                                       // Timestamp of last health check
-	FailureCount int     `gorm:"default:0" json:"failure_count"`                   // Consecutive failure count
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID           uint      `gorm:"primaryKey" json:"id"`
+	ModelName    string    `gorm:"size:50;not null;index" json:"model_name"` // e.g. "gpt-4"
+	ProviderID   uint      `gorm:"not null;index" json:"provider_id"`
+	Provider     Provider  `gorm:"foreignKey:ProviderID" json:"provider"`
+	CostInput    float64   `gorm:"type:decimal(20,10);default:0" json:"cost_input"`  // Cost per 1M tokens
+	CostOutput   float64   `gorm:"type:decimal(20,10);default:0" json:"cost_output"` // Cost per 1M tokens
+	Priority     int       `gorm:"default:0" json:"priority"`                        // Higher = preferred
+	Weight       int       `gorm:"default:10" json:"weight"`                         // For load balancing
+	IsActive     bool      `gorm:"default:true" json:"is_active"`
+	Latency      int       `gorm:"default:0" json:"latency"`       // Latency in ms (updated by background job)
+	LastCheck    time.Time `json:"last_check"`                     // Timestamp of last health check
+	FailureCount int       `gorm:"default:0" json:"failure_count"` // Consecutive failure count
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 // AuditLog records every request for compliance and billing
@@ -183,9 +240,11 @@ type AuditLog struct {
 	UserID           string    `gorm:"size:36;index;not null" json:"user_id"`
 	Model            string    `gorm:"size:50;index" json:"model"`
 	ProviderID       uint      `gorm:"index" json:"provider_id"`
+	OrgID            string    `gorm:"size:36;index" json:"org_id"`
 	PromptTokens     int       `json:"prompt_tokens"`
 	CompletionTokens int       `json:"completion_tokens"`
 	TotalCost        float64   `gorm:"type:decimal(20,10)" json:"total_cost"`
+	ProviderCost     float64   `gorm:"type:decimal(20,10)" json:"provider_cost"`
 	LatencyMS        int64     `json:"latency_ms"`
 	StatusCode       int       `json:"status_code"`
 	ClientIP         string    `gorm:"size:45" json:"client_ip"`
@@ -195,6 +254,54 @@ type AuditLog struct {
 func (l *AuditLog) BeforeCreate(tx *gorm.DB) (err error) {
 	if l.ID == "" {
 		l.ID = uuid.New().String()
+	}
+	return
+}
+
+type Organization struct {
+	ID            string    `gorm:"primaryKey;size:36" json:"id"`
+	Name          string    `gorm:"size:100;not null" json:"name"`
+	OwnerID       string    `gorm:"size:36;not null;index" json:"owner_id"`
+	MonthlyBudget float64   `gorm:"type:decimal(20,8);default:0" json:"monthly_budget"`
+	IsActive      bool      `gorm:"default:true" json:"is_active"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+func (o *Organization) BeforeCreate(tx *gorm.DB) (err error) {
+	if o.ID == "" {
+		o.ID = uuid.New().String()
+	}
+	return
+}
+
+type OrgMember struct {
+	ID        string    `gorm:"primaryKey;size:36" json:"id"`
+	OrgID     string    `gorm:"size:36;not null;uniqueIndex:uniq_org_user;index" json:"org_id"`
+	UserID    string    `gorm:"size:36;not null;uniqueIndex:uniq_org_user;index" json:"user_id"`
+	Role      string    `gorm:"size:20;default:'member'" json:"role"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func (m *OrgMember) BeforeCreate(tx *gorm.DB) (err error) {
+	if m.ID == "" {
+		m.ID = uuid.New().String()
+	}
+	return
+}
+
+type OrgUsage struct {
+	ID        string    `gorm:"primaryKey;size:36" json:"id"`
+	OrgID     string    `gorm:"size:36;not null;uniqueIndex:uniq_org_period;index" json:"org_id"`
+	Period    string    `gorm:"size:7;not null;uniqueIndex:uniq_org_period;index" json:"period"`
+	Spent     float64   `gorm:"type:decimal(20,8);default:0" json:"spent"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+func (u *OrgUsage) BeforeCreate(tx *gorm.DB) (err error) {
+	if u.ID == "" {
+		u.ID = uuid.New().String()
 	}
 	return
 }
