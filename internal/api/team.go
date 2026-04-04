@@ -2,14 +2,17 @@ package api
 
 import (
 	"encoding/csv"
+	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 	"trouter/internal/config"
 	"trouter/internal/models"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 func getOrgMemberRole(orgID string, userID string) (string, error) {
@@ -29,6 +32,20 @@ func requireOrgAdmin(c *gin.Context, orgID string) bool {
 	}
 	if role != "owner" && role != "admin" {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Organization admin required"})
+		return false
+	}
+	return true
+}
+
+func requireOrgOwner(c *gin.Context, orgID string) bool {
+	userID := c.GetString("user_id")
+	role, err := getOrgMemberRole(orgID, userID)
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Organization access denied"})
+		return false
+	}
+	if role != "owner" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Organization owner required"})
 		return false
 	}
 	return true
@@ -194,6 +211,10 @@ func AddOrganizationMemberHandler(c *gin.Context) {
 	if role == "" {
 		role = "member"
 	}
+	if role != "member" && role != "admin" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid role"})
+		return
+	}
 
 	var u models.User
 	if err := config.DB.Select("id, email").First(&u, "email = ?", req.Email).Error; err != nil {
@@ -207,6 +228,13 @@ func AddOrganizationMemberHandler(c *gin.Context) {
 		Role:   role,
 	}
 	if err := config.DB.Create(&m).Error; err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) ||
+			strings.Contains(strings.ToLower(err.Error()), "duplicate key") ||
+			strings.Contains(strings.ToLower(err.Error()), "unique constraint") ||
+			strings.Contains(err.Error(), "uniq_org_user") {
+			c.JSON(http.StatusConflict, gin.H{"error": "Member already exists"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add member"})
 		return
 	}
@@ -219,11 +247,64 @@ func RemoveOrganizationMemberHandler(c *gin.Context) {
 		return
 	}
 	memberUserID := c.Param("user_id")
-	if err := config.DB.Delete(&models.OrgMember{}, "org_id = ? AND user_id = ?", orgID, memberUserID).Error; err != nil {
+
+	var org models.Organization
+	if err := config.DB.Select("id, owner_id").First(&org, "id = ?", orgID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Organization not found"})
+		return
+	}
+	if memberUserID == org.OwnerID {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot remove organization owner"})
+		return
+	}
+
+	tx := config.DB.Delete(&models.OrgMember{}, "org_id = ? AND user_id = ?", orgID, memberUserID)
+	if tx.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove member"})
 		return
 	}
+	if tx.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Member not found"})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"message": "Removed"})
+}
+
+func DissolveOrganizationHandler(c *gin.Context) {
+	orgID := c.Param("id")
+	if !requireOrgOwner(c, orgID) {
+		return
+	}
+
+	var org models.Organization
+	if err := config.DB.Select("id, owner_id, is_active").First(&org, "id = ?", orgID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Organization not found"})
+		return
+	}
+	if !org.IsActive {
+		c.JSON(http.StatusOK, gin.H{"message": "Already dissolved"})
+		return
+	}
+
+	tx := config.DB.Begin()
+	if err := tx.Model(&models.Organization{}).Where("id = ?", orgID).Update("is_active", false).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to dissolve organization"})
+		return
+	}
+	if err := tx.Model(&models.ApiKey{}).Where("org_id = ?", orgID).Update("org_id", nil).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to detach API keys"})
+		return
+	}
+	if err := tx.Delete(&models.OrgMember{}, "org_id = ? AND user_id <> ?", orgID, org.OwnerID).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove members"})
+		return
+	}
+	tx.Commit()
+
+	c.JSON(http.StatusOK, gin.H{"message": "Dissolved"})
 }
 
 func AttachApiKeyToOrganizationHandler(c *gin.Context) {

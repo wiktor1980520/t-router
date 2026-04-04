@@ -142,8 +142,8 @@ export default function AdminSubscriptionPlans() {
                 {plans.map((p) => (
                   <tr key={p.id} className="text-gray-200">
                     <td className="px-6 py-3 font-medium">{p.name}</td>
-                    <td className="px-6 py-3">¥{Number(p.monthly_price).toFixed(2)}</td>
-                    <td className="px-6 py-3">¥{Number(p.monthly_quota).toFixed(2)}</td>
+                    <td className="px-6 py-3">{t('common.currency')}{Number(p.monthly_price).toFixed(2)}</td>
+                    <td className="px-6 py-3">{t('common.currency')}{Number(p.monthly_quota).toFixed(2)}</td>
                     <td className="px-6 py-3">{p.rate_limit || '-'}</td>
                     <td className="px-6 py-3">{p.is_active ? t('admin.active') : t('admin.inactive')}</td>
                     <td className="px-6 py-3 text-right">

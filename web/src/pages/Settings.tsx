@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
-import { Bell, Save } from 'lucide-react';
+import { Bell, Lock, Save } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { AxiosError } from 'axios';
 
@@ -14,6 +14,12 @@ const Settings = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const { t, i18n } = useTranslation();
 
   const handleSendCode = async () => {
@@ -61,6 +67,37 @@ const Settings = () => {
       setError(axiosErr.response?.data?.error || t('settings.update_failed'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordLoading(true);
+    setPasswordMessage('');
+    setPasswordError('');
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError(t('settings.password_mismatch'));
+      setPasswordLoading(false);
+      return;
+    }
+    if (!newPassword || newPassword.length < 8) {
+      setPasswordError(t('settings.password_too_short'));
+      setPasswordLoading(false);
+      return;
+    }
+
+    try {
+      await api.put('/user/password', { old_password: oldPassword, new_password: newPassword });
+      setPasswordMessage(t('settings.password_update_success'));
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError<{ error?: string }>;
+      setPasswordError(axiosErr.response?.data?.error || t('settings.password_update_failed'));
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -158,6 +195,60 @@ const Settings = () => {
           >
             <Save className="h-4 w-4 mr-2" />
             {loading ? t('common.loading') : t('common.save')}
+          </button>
+        </form>
+      </div>
+
+      <div className="bg-gray-900 shadow rounded-lg border border-gray-800 p-6">
+        <div className="flex items-center mb-4">
+          <Lock className="h-6 w-6 text-blue-500 mr-2" />
+          <h2 className="text-xl font-semibold text-white">{t('settings.password')}</h2>
+        </div>
+
+        <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-1">{t('settings.old_password')}</label>
+            <input
+              type="password"
+              autoComplete="current-password"
+              className="block w-full rounded-md border-0 bg-gray-800 py-1.5 px-3 text-gray-100 ring-1 ring-inset ring-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+              value={oldPassword}
+              onChange={(e) => setOldPassword(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-1">{t('settings.new_password')}</label>
+            <input
+              type="password"
+              autoComplete="new-password"
+              className="block w-full rounded-md border-0 bg-gray-800 py-1.5 px-3 text-gray-100 ring-1 ring-inset ring-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-1">{t('settings.confirm_password')}</label>
+            <input
+              type="password"
+              autoComplete="new-password"
+              className="block w-full rounded-md border-0 bg-gray-800 py-1.5 px-3 text-gray-100 ring-1 ring-inset ring-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+          </div>
+
+          {passwordMessage && <div className="text-green-500 text-sm">{passwordMessage}</div>}
+          {passwordError && <div className="text-red-500 text-sm">{passwordError}</div>}
+
+          <button
+            type="submit"
+            disabled={passwordLoading || !oldPassword || !newPassword || !confirmPassword}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            {passwordLoading ? t('common.loading') : t('settings.change_password')}
           </button>
         </form>
       </div>

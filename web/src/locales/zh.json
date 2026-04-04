@@ -25,7 +25,8 @@
     "disabled": "禁用",
     "balance": "余额",
     "admin_role": "管理员",
-    "processing": "处理中..."
+    "processing": "处理中...",
+    "currency": "¥"
   },
   "playground": {
     "title": "模型在线测试",
@@ -46,6 +47,15 @@
     "playground": "模型对话",
     "sign_out": "退出登录",
     "admin": "管理后台"
+  },
+  "contact": {
+    "title": "联系我们",
+    "feishu_desc": "扫描下方二维码添加飞书客服",
+    "feishu_qr_alt": "飞书客服二维码",
+    "email_desc": "或发送邮件至",
+    "copy_email": "复制邮箱地址",
+    "copied": "已复制到剪贴板",
+    "open": "打开客服"
   },
   "auth": {
     "login_title": "登录您的账户",
@@ -148,7 +158,11 @@
     "months": "月数",
     "auto_renew": "自动续费",
     "user_id": "用户ID",
+    "allowed_models": "允许模型（可选）",
+    "rate_limit": "限流配置 (RPM)",
     "allowed_models_placeholder": "模型ID，英文逗号分隔（不填表示不限模型）",
+    "active": "启用",
+    "inactive": "禁用",
     "range_days": "时间范围",
     "range_today": "今日",
     "range_last_days": "近 {{days}} 天",
@@ -468,9 +482,26 @@
     "members": "成员",
     "role": "角色",
     "email": "邮箱",
+    "actions": "操作",
+    "inactive": "已停用",
     "period": "账期",
     "spent": "已用",
     "export": "导出审计 CSV",
+    "add_member": "添加成员",
+    "member_email_placeholder": "成员邮箱（需已注册）",
+    "role_member": "成员",
+    "role_admin": "管理员",
+    "add": "添加",
+    "remove": "移除",
+    "member_added": "成员已添加",
+    "member_removed": "成员已移除",
+    "member_add_failed": "添加成员失败",
+    "member_remove_failed": "移除成员失败",
+    "member_remove_confirm": "确认移除成员 {{email}}？",
+    "dissolve": "解散团队",
+    "dissolve_confirm": "确认解散团队「{{name}}」？解散后将停用团队并解绑相关 API Key。",
+    "dissolve_success": "团队已解散",
+    "dissolve_failed": "解散团队失败",
     "empty": "暂无团队"
   },
   "settings": {
@@ -483,6 +514,15 @@
     "update_success": "设置更新成功",
     "update_failed": "设置更新失败",
     "language": "语言",
-    "select_language": "选择语言"
+    "select_language": "选择语言",
+    "password": "密码",
+    "change_password": "修改密码",
+    "old_password": "旧密码",
+    "new_password": "新密码",
+    "confirm_password": "确认新密码",
+    "password_mismatch": "两次输入的新密码不一致",
+    "password_too_short": "新密码至少 8 位",
+    "password_update_success": "密码修改成功",
+    "password_update_failed": "密码修改失败"
   }
 }

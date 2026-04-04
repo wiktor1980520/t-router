@@ -105,16 +105,19 @@ func main() {
 			protected.POST("/user/recharge", api.RechargeHandler) // Keep for manual/admin
 			protected.POST("/payment/create", api.CreatePaymentHandler)
 			protected.PUT("/user/settings", api.UpdateSettingsHandler)
+			protected.PUT("/user/password", api.ChangePasswordHandler)
 			protected.GET("/user/stats", api.GetUserStatsHandler)
 
 			protected.POST("/team", api.CreateOrganizationHandler)
 			protected.GET("/team", api.ListMyOrganizationsHandler)
 			protected.GET("/team/:id", api.GetOrganizationHandler)
 			protected.PUT("/team/:id", api.UpdateOrganizationHandler)
+			protected.DELETE("/team/:id", api.DissolveOrganizationHandler)
 			protected.POST("/team/:id/members", api.AddOrganizationMemberHandler)
 			protected.DELETE("/team/:id/members/:user_id", api.RemoveOrganizationMemberHandler)
 			protected.POST("/team/:id/api-keys/:key_id/attach", api.AttachApiKeyToOrganizationHandler)
 			protected.GET("/team/:id/audit_logs/export", api.ExportOrganizationAuditLogsHandler)
+			protected.GET("/keys", api.ListApiKeysHandler)
 			protected.POST("/keys", api.CreateApiKeyHandler)
 			protected.DELETE("/keys/:id", api.DeleteApiKeyHandler)
 

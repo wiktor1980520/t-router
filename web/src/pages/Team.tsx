@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../lib/api';
-import { Plus, Users, Loader2, X, Download } from 'lucide-react';
+import { Plus, Users, Loader2, X, Download, Trash2 } from 'lucide-react';
+import type { AxiosError } from 'axios';
 
 type OrgRow = {
   id: string;
@@ -35,7 +36,13 @@ export default function TeamPage() {
   const [newOrg, setNewOrg] = useState({ name: '', monthly_budget: 0 });
 
   const [selectedOrg, setSelectedOrg] = useState<OrgDetail | null>(null);
+  const [selectedOrgRole, setSelectedOrgRole] = useState('');
   const [loadingOrg, setLoadingOrg] = useState(false);
+  const [memberEmail, setMemberEmail] = useState('');
+  const [memberRole, setMemberRole] = useState<'member' | 'admin'>('member');
+  const [memberBusy, setMemberBusy] = useState(false);
+  const [memberMessage, setMemberMessage] = useState('');
+  const [memberError, setMemberError] = useState('');
 
   const load = async () => {
     try {
@@ -65,11 +72,83 @@ export default function TeamPage() {
 
   const openOrg = async (id: string) => {
     try {
+      setMemberMessage('');
+      setMemberError('');
+      setMemberEmail('');
+      setMemberRole('member');
+      setSelectedOrgRole(orgs.find((o) => o.id === id)?.role || '');
       setLoadingOrg(true);
       const res = await api.get<OrgDetail>(`/team/${id}`);
       setSelectedOrg(res.data);
     } finally {
       setLoadingOrg(false);
+    }
+  };
+
+  const reloadSelectedOrg = async () => {
+    if (!selectedOrg) return;
+    const res = await api.get<OrgDetail>(`/team/${selectedOrg.org.id}`);
+    setSelectedOrg(res.data);
+  };
+
+  const isOrgAdmin = selectedOrgRole === 'owner' || selectedOrgRole === 'admin';
+  const isOrgOwner = selectedOrgRole === 'owner';
+
+  const addMember = async () => {
+    if (!selectedOrg) return;
+    setMemberBusy(true);
+    setMemberMessage('');
+    setMemberError('');
+    try {
+      await api.post(`/team/${selectedOrg.org.id}/members`, { email: memberEmail.trim(), role: memberRole });
+      setMemberMessage(t('team.member_added'));
+      setMemberEmail('');
+      setMemberRole('member');
+      await reloadSelectedOrg();
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError<{ error?: string }>;
+      setMemberError(axiosErr.response?.data?.error || t('team.member_add_failed'));
+    } finally {
+      setMemberBusy(false);
+    }
+  };
+
+  const removeMember = async (memberUserId: string, memberEmailText: string) => {
+    if (!selectedOrg) return;
+    const ok = window.confirm(t('team.member_remove_confirm', { email: memberEmailText }));
+    if (!ok) return;
+    setMemberBusy(true);
+    setMemberMessage('');
+    setMemberError('');
+    try {
+      await api.delete(`/team/${selectedOrg.org.id}/members/${memberUserId}`);
+      setMemberMessage(t('team.member_removed'));
+      await reloadSelectedOrg();
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError<{ error?: string }>;
+      setMemberError(axiosErr.response?.data?.error || t('team.member_remove_failed'));
+    } finally {
+      setMemberBusy(false);
+    }
+  };
+
+  const dissolveOrg = async () => {
+    if (!selectedOrg) return;
+    const ok = window.confirm(t('team.dissolve_confirm', { name: selectedOrg.org.name }));
+    if (!ok) return;
+    setMemberBusy(true);
+    setMemberMessage('');
+    setMemberError('');
+    try {
+      await api.delete(`/team/${selectedOrg.org.id}`);
+      setSelectedOrg(null);
+      setMemberMessage(t('team.dissolve_success'));
+      await load();
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError<{ error?: string }>;
+      setMemberError(axiosErr.response?.data?.error || t('team.dissolve_failed'));
+    } finally {
+      setMemberBusy(false);
     }
   };
 
@@ -124,7 +203,10 @@ export default function TeamPage() {
             >
               <div className="flex items-center justify-between">
                 <div className="text-white font-semibold">{o.name}</div>
-                <div className="text-xs text-gray-400">{o.role}</div>
+                <div className="text-xs text-gray-400">
+                  {o.role}
+                  {!o.is_active ? ` · ${t('team.inactive')}` : ''}
+                </div>
               </div>
               <div className="mt-2 text-sm text-gray-400">
                 {t('team.monthly_budget')}
@@ -216,6 +298,51 @@ export default function TeamPage() {
                   {t('team.export')}
                 </button>
               </div>
+
+              {isOrgOwner && selectedOrg.org.is_active && (
+                <div className="flex justify-end">
+                  <button
+                    onClick={dissolveOrg}
+                    disabled={memberBusy}
+                    className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {t('team.dissolve')}
+                  </button>
+                </div>
+              )}
+
+              {isOrgAdmin && selectedOrg.org.is_active && (
+                <div className="bg-gray-950 border border-gray-800 rounded-xl p-4 space-y-3">
+                  <div className="text-sm text-gray-300 font-medium">{t('team.add_member')}</div>
+                  <div className="flex flex-col md:flex-row gap-3">
+                    <input
+                      value={memberEmail}
+                      onChange={(e) => setMemberEmail(e.target.value)}
+                      placeholder={t('team.member_email_placeholder')}
+                      className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white"
+                    />
+                    <select
+                      value={memberRole}
+                      onChange={(e) => setMemberRole(e.target.value as 'member' | 'admin')}
+                      className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white"
+                    >
+                      <option value="member">{t('team.role_member')}</option>
+                      <option value="admin">{t('team.role_admin')}</option>
+                    </select>
+                    <button
+                      onClick={addMember}
+                      disabled={memberBusy || !memberEmail.trim()}
+                      className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2.5 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {memberBusy && <Loader2 className="w-4 h-4 animate-spin" />}
+                      {t('team.add')}
+                    </button>
+                  </div>
+                  {memberMessage && <div className="text-green-500 text-sm">{memberMessage}</div>}
+                  {memberError && <div className="text-red-500 text-sm">{memberError}</div>}
+                </div>
+              )}
+
               {loadingOrg ? (
                 <div className="flex justify-center py-8">
                   <Loader2 className="w-6 h-6 text-cyan-400 animate-spin" />
@@ -227,6 +354,7 @@ export default function TeamPage() {
                       <tr className="text-left text-gray-400">
                         <th className="px-4 py-3">{t('team.email')}</th>
                         <th className="px-4 py-3">{t('team.role')}</th>
+                        {isOrgAdmin && <th className="px-4 py-3 text-right">{t('team.actions')}</th>}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-800">
@@ -234,11 +362,26 @@ export default function TeamPage() {
                         <tr key={m.user_id} className="text-gray-200">
                           <td className="px-4 py-3">{m.email}</td>
                           <td className="px-4 py-3">{m.role}</td>
+                          {isOrgAdmin && (
+                            <td className="px-4 py-3 text-right">
+                              <button
+                                onClick={() => removeMember(m.user_id, m.email)}
+                                disabled={memberBusy || m.role === 'owner' || !selectedOrg.org.is_active}
+                                className="inline-flex items-center gap-2 text-red-400 hover:text-red-300 disabled:text-gray-600 disabled:cursor-not-allowed"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                {t('team.remove')}
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       ))}
                       {selectedOrg.members.length === 0 && (
                         <tr>
-                          <td className="px-4 py-6 text-center text-gray-500" colSpan={2}>
+                          <td
+                            className="px-4 py-6 text-center text-gray-500"
+                            colSpan={isOrgAdmin ? 3 : 2}
+                          >
                             {t('admin.no_data')}
                           </td>
                         </tr>

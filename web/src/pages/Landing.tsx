@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Check, Shield, Zap, Wallet, Users, BarChart3 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import FloatingContact from '../components/FloatingContact';
 
 export default function LandingPage() {
   const { t } = useTranslation();
@@ -287,6 +288,8 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      <FloatingContact />
     </div>
   );
 }

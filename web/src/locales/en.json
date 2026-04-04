@@ -25,7 +25,8 @@
     "disabled": "Disabled",
     "balance": "Balance",
     "admin_role": "Admin",
-    "processing": "Processing..."
+    "processing": "Processing...",
+    "currency": "¥"
   },
   "playground": {
     "title": "AI Playground",
@@ -46,6 +47,15 @@
     "playground": "Playground",
     "sign_out": "Sign out",
     "admin": "Admin Panel"
+  },
+  "contact": {
+    "title": "Contact Us",
+    "feishu_desc": "Scan the QR code below to add Feishu support",
+    "feishu_qr_alt": "Feishu Support QR Code",
+    "email_desc": "Or send email to",
+    "copy_email": "Copy email address",
+    "copied": "Copied to clipboard",
+    "open": "Open Support"
   },
   "auth": {
     "login_title": "Sign in to your account",
@@ -148,7 +158,11 @@
     "months": "Months",
     "auto_renew": "Auto renew",
     "user_id": "User ID",
+    "allowed_models": "Allowed models (optional)",
+    "rate_limit": "Rate limit (RPM)",
     "allowed_models_placeholder": "Model IDs, comma separated (empty means all)",
+    "active": "Active",
+    "inactive": "Inactive",
     "range_days": "Range",
     "range_today": "Today",
     "range_last_days": "Last {{days}} days",
@@ -468,9 +482,26 @@
     "members": "Members",
     "role": "Role",
     "email": "Email",
+    "actions": "Actions",
+    "inactive": "Inactive",
     "period": "Period",
     "spent": "Spent",
     "export": "Export audit CSV",
+    "add_member": "Add member",
+    "member_email_placeholder": "Member email (must be registered)",
+    "role_member": "Member",
+    "role_admin": "Admin",
+    "add": "Add",
+    "remove": "Remove",
+    "member_added": "Member added",
+    "member_removed": "Member removed",
+    "member_add_failed": "Failed to add member",
+    "member_remove_failed": "Failed to remove member",
+    "member_remove_confirm": "Remove {{email}} from this team?",
+    "dissolve": "Dissolve team",
+    "dissolve_confirm": "Dissolve “{{name}}”? This will deactivate the team and detach related API keys.",
+    "dissolve_success": "Team dissolved",
+    "dissolve_failed": "Failed to dissolve team",
     "empty": "No teams yet"
   },
   "settings": {
@@ -483,6 +514,15 @@
     "update_success": "Settings updated successfully",
     "update_failed": "Failed to update settings",
     "language": "Language",
-    "select_language": "Select Language"
+    "select_language": "Select Language",
+    "password": "Password",
+    "change_password": "Change password",
+    "old_password": "Current password",
+    "new_password": "New password",
+    "confirm_password": "Confirm new password",
+    "password_mismatch": "New passwords do not match",
+    "password_too_short": "New password must be at least 8 characters",
+    "password_update_success": "Password updated successfully",
+    "password_update_failed": "Failed to update password"
   }
 }

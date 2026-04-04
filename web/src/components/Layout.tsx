@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, Key, CreditCard, LogOut, Settings, Menu, X, ShieldCheck, MessageSquare, Users } from 'lucide-react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
+import FloatingContact from './FloatingContact';
 
 const Layout = () => {
   const { t } = useTranslation();
@@ -125,6 +126,8 @@ const Layout = () => {
           </footer>
         </main>
       </div>
+
+      <FloatingContact />
     </div>
   );
 };
