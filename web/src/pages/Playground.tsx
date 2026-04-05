@@ -76,33 +76,26 @@ export default function Playground() {
       try {
         const res = await api.get<ApiKey[]>('/keys');
         if (canceled) return;
-        const usable = res.data.filter(k => k.is_active && k.key);
+        const usable = res.data.filter(k => k.is_active);
         setApiKeys(usable);
 
         const cachedId = localStorage.getItem('playground_api_key_id') || '';
         const defaultKey = (cachedId && usable.find(k => k.id === cachedId)) || usable[0];
-        if (defaultKey?.key) {
+        if (defaultKey) {
           setSelectedApiKeyId(defaultKey.id);
           localStorage.setItem('playground_api_key_id', defaultKey.id);
-          localStorage.setItem('playground_api_key', defaultKey.key);
-          fetchModelsWithKey(defaultKey.key);
+          fetchModelsWithKey(defaultKey.key || '');
           return;
         }
 
-        const created = await api.post<{ key: string }>('/keys', { label: 'Playground' });
-        if (canceled) return;
-        localStorage.setItem('playground_api_key', created.data.key);
-        fetchModelsWithKey(created.data.key);
+        // 无密钥时不再自动创建，留给用户手动处理
+        if (usable.length === 0) {
+          setModels([]);
+          return;
+        }
       } catch (error) {
         console.error('Failed to fetch API keys:', error);
-        try {
-          const created = await api.post<{ key: string }>('/keys', { label: 'Playground' });
-          if (canceled) return;
-          localStorage.setItem('playground_api_key', created.data.key);
-          fetchModelsWithKey(created.data.key);
-        } catch (e) {
-          console.error('Failed to create API key:', e);
-        }
+        setModels([]);
       }
     };
     init();
@@ -122,25 +115,26 @@ export default function Playground() {
 
   const ensurePlaygroundApiKey = async (): Promise<string> => {
     const selected = selectedApiKeyId ? apiKeys.find(k => k.id === selectedApiKeyId) : undefined;
-    if (selected?.key) {
+    if (selected && selected.key) {
       localStorage.setItem('playground_api_key_id', selected.id);
-      localStorage.setItem('playground_api_key', selected.key);
       return selected.key;
     }
 
-    const cached = localStorage.getItem('playground_api_key');
-    if (cached) return cached;
-
-    const res = await api.get<ApiKey[]>('/keys');
-    const existing = res.data.find(k => k.is_active && k.key)?.key;
-    if (existing) {
-      localStorage.setItem('playground_api_key', existing);
-      return existing;
+    const cachedId = localStorage.getItem('playground_api_key_id');
+    if (cachedId) {
+      const cachedKey = apiKeys.find(k => k.id === cachedId);
+      if (cachedKey && cachedKey.key) return cachedKey.key;
     }
 
-    const created = await api.post<{ key: string }>('/keys', { label: 'Playground' });
-    localStorage.setItem('playground_api_key', created.data.key);
-    return created.data.key;
+    const res = await api.get<ApiKey[]>('/keys');
+    const existing = res.data.find(k => k.is_active && k.key);
+    if (existing) {
+      setApiKeys(prev => [...prev, existing]);
+      setSelectedApiKeyId(existing.id);
+      localStorage.setItem('playground_api_key_id', existing.id);
+      return existing.key || '';
+    }
+    throw new Error('No active API key found');
   };
 
   const fetchModels = async (apiKeyParam?: string) => {
@@ -324,35 +318,43 @@ export default function Playground() {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-semibold text-white">{t('playground.title')}</h1>
         <div className="flex items-center gap-4">
-          <select
-            value={selectedApiKeyId}
-            onChange={(e) => {
-              const id = e.target.value;
-              setSelectedApiKeyId(id);
-              localStorage.setItem('playground_api_key_id', id);
-              const k = apiKeys.find(x => x.id === id);
-              if (k?.key) {
-                localStorage.setItem('playground_api_key', k.key);
-                fetchModels(k.key);
-              } else {
-                localStorage.removeItem('playground_api_key');
-              }
-            }}
-            className="block w-56 rounded-md border-0 bg-gray-800 py-1.5 text-white shadow-sm ring-1 ring-inset ring-gray-700 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-          >
-            <option value="" disabled>{t('playground.select_api_key')}</option>
-            {apiKeys.map((k) => (
-              <option key={k.id} value={k.id}>
-                {k.label} ({k.key_prefix})
-              </option>
-            ))}
-          </select>
+          {apiKeys.length === 0 ? (
+            <div className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-400">
+              {t('keys.no_keys')} - <a href="/dashboard/keys" className="text-blue-400 hover:underline">{t('keys.create_new')}</a>
+            </div>
+          ) : (
+            <select
+              value={selectedApiKeyId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setSelectedApiKeyId(id);
+                localStorage.setItem('playground_api_key_id', id);
+                const k = apiKeys.find(x => x.id === id);
+                if (k?.key) {
+                  fetchModels(k.key);
+                }
+              }}
+              className="block w-56 rounded-md border-0 bg-gray-800 py-1.5 text-white shadow-sm ring-1 ring-inset ring-gray-700 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+            >
+              <option value="" disabled>{t('playground.select_api_key')}</option>
+              {apiKeys.map((k) => (
+                <option key={k.id} value={k.id}>
+                  {k.label} ({k.key_prefix})
+                </option>
+              ))}
+            </select>
+          )}
           <select
             value={selectedModel}
             onChange={(e) => setSelectedModel(e.target.value)}
             className="block w-48 rounded-md border-0 bg-gray-800 py-1.5 text-white shadow-sm ring-1 ring-inset ring-gray-700 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+            disabled={models.length === 0}
           >
-            <option value="" disabled>{t('playground.select_model')}</option>
+            {models.length === 0 ? (
+              <option value="">{t('playground.no_models')}</option>
+            ) : (
+              <option value="" disabled>{t('playground.select_model')}</option>
+            )}
             {models.map((model) => (
               <option key={model.id} value={model.id}>
                 {model.name}

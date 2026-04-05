@@ -35,7 +35,9 @@
     "clear_history": "Clear history",
     "empty_state": "Start a conversation with the AI...",
     "input_placeholder": "Type your message here...",
-    "send": "Send"
+    "send": "Send",
+    "no_models": "No models available",
+    "no_keys": "No API keys found"
   },
   "nav": {
     "dashboard": "Dashboard",

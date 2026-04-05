@@ -35,7 +35,9 @@
     "clear_history": "清空历史",
     "empty_state": "开始与 AI 对话...",
     "input_placeholder": "输入消息...",
-    "send": "发送"
+    "send": "发送",
+    "no_models": "暂无可用模型",
+    "no_keys": "暂无 API 密钥"
   },
   "nav": {
     "dashboard": "仪表盘",
