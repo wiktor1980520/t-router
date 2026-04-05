@@ -37,7 +37,7 @@ export default function Playground() {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const gatewayBase = (() => {
-    const raw = (import.meta.env.VITE_API_BASE_URL || 'https://api.t-router.com').toString().replace(/\/+$/, '');
+    const raw = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080').toString().replace(/\/+$/, '');
     return raw.replace(/\/(api|v1)$/, '');
   })();
 
@@ -84,12 +84,27 @@ export default function Playground() {
         if (defaultKey) {
           setSelectedApiKeyId(defaultKey.id);
           localStorage.setItem('playground_api_key_id', defaultKey.id);
-          fetchModelsWithKey(defaultKey.key || '');
+          
+          // 从localStorage获取完整密钥
+          const fullKey = localStorage.getItem(`api_key_${defaultKey.id}`) || localStorage.getItem('playground_api_key');
+          if (fullKey) {
+            fetchModelsWithKey(fullKey);
+          } else {
+            // 如果没有保存的密钥，提示用户创建新密钥
+            setModels([]);
+            console.warn('No API key found. Please create a new API key in the Keys page.');
+          }
           return;
         }
 
-        // 无密钥时不再自动创建，留给用户手动处理
+        // 无密钥时检查localStorage
         if (usable.length === 0) {
+          // 检查是否有保存的密钥
+          const savedKey = localStorage.getItem('playground_api_key');
+          if (savedKey) {
+            fetchModelsWithKey(savedKey);
+            return;
+          }
           setModels([]);
           return;
         }
@@ -115,26 +130,16 @@ export default function Playground() {
 
   const ensurePlaygroundApiKey = async (): Promise<string> => {
     const selected = selectedApiKeyId ? apiKeys.find(k => k.id === selectedApiKeyId) : undefined;
-    if (selected && selected.key) {
+    if (selected) {
       localStorage.setItem('playground_api_key_id', selected.id);
-      return selected.key;
+      
+      // 从localStorage获取完整密钥
+      const fullKey = localStorage.getItem(`api_key_${selected.id}`) || localStorage.getItem('playground_api_key');
+      if (fullKey) {
+        return fullKey;
+      }
     }
-
-    const cachedId = localStorage.getItem('playground_api_key_id');
-    if (cachedId) {
-      const cachedKey = apiKeys.find(k => k.id === cachedId);
-      if (cachedKey && cachedKey.key) return cachedKey.key;
-    }
-
-    const res = await api.get<ApiKey[]>('/keys');
-    const existing = res.data.find(k => k.is_active && k.key);
-    if (existing) {
-      setApiKeys(prev => [...prev, existing]);
-      setSelectedApiKeyId(existing.id);
-      localStorage.setItem('playground_api_key_id', existing.id);
-      return existing.key || '';
-    }
-    throw new Error('No active API key found');
+    throw new Error('No API key found. Please create a new API key in the Keys page.');
   };
 
   const fetchModels = async (apiKeyParam?: string) => {

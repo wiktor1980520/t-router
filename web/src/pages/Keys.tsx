@@ -82,6 +82,14 @@ const ApiKeys = () => {
       }
       const res = await api.post('/keys', payload);
       setCreatedKey(res.data.key);
+      
+      // 保存密钥到localStorage供Playground使用
+      if (res.data.key) {
+        localStorage.setItem(`api_key_${res.data.id}`, res.data.key);
+        localStorage.setItem('playground_api_key', res.data.key);
+        localStorage.setItem('playground_api_key_id', res.data.id);
+      }
+      
       setNewKeyLabel('');
       fetchKeys();
     } catch (err) {
