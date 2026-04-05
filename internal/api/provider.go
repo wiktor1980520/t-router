@@ -67,8 +67,9 @@ func ListAvailableModelsHandler(c *gin.Context) {
 }
 
 func ListV1ModelsHandler(c *gin.Context) {
-	modelIDs, err := routableModelIDs()
-	if err != nil {
+	// 仅按权限配置返回模型，不再判断路由/供应商激活状态
+	var modelIDs []string
+	if err := config.DB.Model(&models.Model{}).Select("id").Where("is_active = ?", true).Find(&modelIDs).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch models"})
 		return
 	}
@@ -103,7 +104,7 @@ func ListV1ModelsHandler(c *gin.Context) {
 		}
 	}
 
-	// 3. Apply Filters
+	// 3. Filter based on permissions only
 	filtered := make([]string, 0, len(modelIDs))
 	for _, id := range modelIDs {
 		allowed := true
